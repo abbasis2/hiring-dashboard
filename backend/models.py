@@ -11,11 +11,16 @@ class Base(DeclarativeBase):
 
 
 class TimestampMixin:
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    @staticmethod
+    def _utc_now_naive() -> datetime:
+        # Store UTC as naive datetime for compatibility with TIMESTAMP WITHOUT TIME ZONE.
+        return datetime.now(timezone.utc).replace(tzinfo=None)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now_naive)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=_utc_now_naive,
+        onupdate=_utc_now_naive,
     )
 
 
