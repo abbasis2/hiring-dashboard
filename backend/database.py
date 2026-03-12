@@ -18,7 +18,13 @@ _engine: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
 _current_url: str | None = None
 DATABASE_URL_KEYS = ("DATABASE_URL", "POSTGRES_URL_NON_POOLING", "POSTGRES_URL")
-ASYNC_PG_DROP_QUERY_KEYS = {"pgbouncer", "connection_limit", "options", "schema"}
+ASYNC_PG_DROP_QUERY_KEYS = {
+    "pgbouncer",
+    "connection_limit",
+    "options",
+    "schema",
+    "channel_binding",
+}
 
 REQUIRED_COLUMNS = {
     "outstanding_roles": {"job_id", "role_title", "team", "status", "active_inactive"},
