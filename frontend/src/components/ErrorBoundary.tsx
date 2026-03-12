@@ -22,7 +22,7 @@ export default class ErrorBoundary extends Component<PropsWithChildren, State> {
               Refresh the page or try the action again.
             </p>
             <button
-              className="mt-6 rounded-lg bg-cyan-500 px-4 py-2 font-semibold text-slate-950 transition-all duration-200 hover:bg-cyan-400"
+              className="mt-6 rounded-lg bg-[var(--accent-primary)] px-4 py-2 font-semibold text-[var(--text-on-accent)] transition-all duration-200 hover:bg-[var(--accent-primary-strong)]"
               onClick={() => this.setState({ hasError: false })}
               type="button"
             >

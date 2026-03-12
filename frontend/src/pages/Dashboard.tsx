@@ -103,7 +103,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <section className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.24em] text-cyan-300">KPI Dashboard</p>
+          <p className="text-sm uppercase tracking-[0.24em] text-[var(--accent-primary)]">KPI Dashboard</p>
           <h1 className="mt-2 text-4xl font-semibold">Plutus21 Hiring Dashboard</h1>
           <p className="mt-2 text-sm text-[var(--text-secondary)]">Generated from the outstanding roles and filled roles workbook structure. As of {generated_on}.</p>
         </div>

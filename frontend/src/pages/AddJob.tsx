@@ -1,11 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
+import { Link } from "react-router-dom";
 import { z } from "zod";
 
 import { useMasterOptions } from "../api/masterOptions";
 import client from "../api/client";
-import MasterOptionsManager from "../components/MasterOptionsManager";
 import {
   DEFAULT_DROPDOWN_OPTIONS,
 } from "../constants";
@@ -87,6 +87,13 @@ export default function AddJob() {
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
           Create a new outstanding position. It is saved directly into the Outstanding Positions dataset and updates the dashboard.
         </p>
+        <p className="mt-2 text-sm text-[var(--text-secondary)]">
+          Need to manage dropdown values first? Use{" "}
+          <Link className="font-semibold text-[var(--accent-primary)] hover:underline" to="/master-pages">
+            Master Pages
+          </Link>
+          .
+        </p>
       </section>
       <form className="grid gap-6" onSubmit={handleSubmit((values) => mutation.mutate(values))}>
         <div className="card-shell grid gap-4 md:grid-cols-2">
@@ -97,7 +104,7 @@ export default function AddJob() {
           <label className="space-y-2">
             <span className="text-sm text-[var(--text-secondary)]">Role Title</span>
             <input className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3" {...register("role_title")} />
-            {errors.role_title ? <p className="text-sm text-red-300">{errors.role_title.message}</p> : null}
+            {errors.role_title ? <p className="text-sm text-[var(--danger-text)]">{errors.role_title.message}</p> : null}
           </label>
           <label className="space-y-2">
             <span className="text-sm text-[var(--text-secondary)]">Link to JD</span>
@@ -178,13 +185,12 @@ export default function AddJob() {
             </select>
           </label>
         </div>
-        <MasterOptionsManager optionsByField={options} />
         <div className="flex items-center gap-4">
-          <button className="rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 transition-all duration-200 hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-70" disabled={mutation.isPending} type="submit">
+          <button className="rounded-xl bg-[var(--accent-primary)] px-5 py-3 font-semibold text-[var(--text-on-accent)] transition-all duration-200 hover:bg-[var(--accent-primary-strong)] disabled:cursor-not-allowed disabled:opacity-70" disabled={mutation.isPending} type="submit">
             {mutation.isPending ? "Saving..." : "Create Position"}
           </button>
-          {mutation.isSuccess ? <span className="text-sm text-emerald-300">Position added to outstanding positions.</span> : null}
-          {mutation.isError ? <span className="text-sm text-red-300">Unable to create position.</span> : null}
+          {mutation.isSuccess ? <span className="text-sm text-emerald-700">Position added to outstanding positions.</span> : null}
+          {mutation.isError ? <span className="text-sm text-[var(--danger-text)]">Unable to create position.</span> : null}
         </div>
       </form>
     </div>

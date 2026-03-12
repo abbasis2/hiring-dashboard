@@ -48,6 +48,30 @@ export const MASTER_FIELD_LABELS: Record<MasterFieldKey, string> = {
   filled_status: "Filled Status",
 };
 
+export const MASTER_FIELD_KEYS = Object.keys(MASTER_FIELD_LABELS) as MasterFieldKey[];
+
+export const MASTER_FIELD_DESCRIPTIONS: Record<MasterFieldKey, string> = {
+  team: "Controls available team values in Add, Outstanding, and Filled pages.",
+  location: "Controls available location values in Add, Outstanding, and Filled pages.",
+  departure_type: "Controls available departure type values across all role forms.",
+  outstanding_status: "Controls status values shown for outstanding positions.",
+  active_inactive: "Controls active/inactive values used in outstanding roles.",
+  filled_status: "Controls status values shown for filled positions.",
+};
+
+export const MASTER_FIELD_ROUTE_LABELS: Record<MasterFieldKey, string> = {
+  team: "Teams",
+  location: "Locations",
+  departure_type: "Departure Types",
+  outstanding_status: "Outstanding Statuses",
+  active_inactive: "Active / Inactive",
+  filled_status: "Filled Statuses",
+};
+
+export function isMasterFieldKey(value: string): value is MasterFieldKey {
+  return MASTER_FIELD_KEYS.includes(value as MasterFieldKey);
+}
+
 export const DEFAULT_DROPDOWN_OPTIONS: DropdownOptions = {
   team: TEAM_OPTIONS,
   location: LOCATION_OPTIONS,

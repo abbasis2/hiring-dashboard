@@ -5,18 +5,28 @@
 @tailwind utilities;
 
 :root {
-  --bg-base: #0b1220;
-  --bg-surface: #111c30;
-  --bg-elevated: #172640;
-  --accent-primary: #38bdf8;
-  --accent-glow: #38bdf833;
-  --accent-success: #22c55e;
-  --accent-warning: #f59e0b;
-  --accent-danger: #ef4444;
-  --text-primary: #e8f0ff;
-  --text-secondary: #9bb0c9;
-  --text-muted: #5f738f;
-  --border: #243753;
+  --bg-base: #f3f7fc;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f5f8fd;
+  --bg-sidebar: #0f2138;
+  --bg-sidebar-soft: #16304f;
+  --accent-primary: #0f6cbd;
+  --accent-primary-strong: #0b5ca1;
+  --accent-primary-soft: #dcecff;
+  --accent-success: #15803d;
+  --accent-warning: #b45309;
+  --accent-danger: #be123c;
+  --danger-soft: #fff1f2;
+  --danger-border: #fecdd3;
+  --danger-text: #9f1239;
+  --text-primary: #0f223a;
+  --text-secondary: #586d87;
+  --text-muted: #7c8ca1;
+  --text-on-accent: #f8fbff;
+  --text-on-dark: #f3f8ff;
+  --text-on-dark-muted: #a9b9cd;
+  --border: #d5e1ef;
+  --sidebar-border: #24466d;
 }
 
 @layer base {
@@ -28,12 +38,31 @@
     margin: 0;
     min-height: 100vh;
     background:
-      radial-gradient(circle at top right, rgba(56, 189, 248, 0.2), transparent 32%),
-      radial-gradient(circle at bottom left, rgba(34, 197, 94, 0.14), transparent 24%),
+      radial-gradient(circle at top right, rgba(15, 108, 189, 0.12), transparent 32%),
+      radial-gradient(circle at bottom left, rgba(17, 34, 58, 0.06), transparent 28%),
       var(--bg-base);
     color: var(--text-primary);
     font-family: "Manrope", sans-serif;
-    line-height: 1.45;
+    line-height: 1.5;
+  }
+
+  input,
+  textarea,
+  select {
+    color: var(--text-primary);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--text-muted);
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: 2px solid color-mix(in srgb, var(--accent-primary) 30%, transparent);
+    outline-offset: 1px;
+    border-color: color-mix(in srgb, var(--accent-primary) 55%, var(--border));
   }
 
   h1,
@@ -48,9 +77,10 @@
 
 @layer utilities {
   .card-shell {
-    @apply rounded-xl border p-6 transition-all duration-200;
+    @apply rounded-2xl border p-6 transition-all duration-200;
     background-color: var(--bg-surface);
     border-color: var(--border);
+    box-shadow: 0 14px 35px rgba(16, 34, 58, 0.05);
   }
 
   .mono {
@@ -59,15 +89,15 @@
 }
 
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+  background: #e9eef7;
 }
 
 ::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: #3b4d68;
+  background: #bccadc;
 }

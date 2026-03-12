@@ -17,7 +17,7 @@ type Props = {
 
 export default function KPICard({ title, value, subtitle, icon, tone = "cyan" }: Props) {
   return (
-    <div className="card-shell relative overflow-hidden shadow-cyan">
+    <div className="card-shell relative overflow-hidden">
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-20 blur-3xl"
         style={{ background: `radial-gradient(circle, ${colorMap[tone]}33 0%, transparent 70%)` }}

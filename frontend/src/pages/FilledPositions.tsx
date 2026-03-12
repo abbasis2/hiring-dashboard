@@ -52,7 +52,7 @@ export default function FilledPositions() {
         </label>
       </section>
       {filledQuery.isError ? (
-        <div className="card-shell border-red-500/30 bg-red-500/10 text-sm text-red-200">
+        <div className="card-shell border-[var(--danger-border)] bg-[var(--danger-soft)] text-sm text-[var(--danger-text)]">
           Unable to load filled positions. Please refresh and try again.
         </div>
       ) : null}

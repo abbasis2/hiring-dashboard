@@ -33,7 +33,11 @@ export default function FilledRolesTable({ roles, options, onSave }: Props) {
 
   return (
     <div className="space-y-3">
-      {error ? <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</div> : null}
+      {error ? (
+        <div className="rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger-text)]">
+          {error}
+        </div>
+      ) : null}
       <div className="card-shell overflow-hidden p-0">
         <div className="overflow-x-auto">
           <table className="min-w-[1200px] divide-y divide-[var(--border)] text-sm">
@@ -67,7 +71,7 @@ export default function FilledRolesTable({ roles, options, onSave }: Props) {
                   <td className="px-3 py-3"><textarea className="min-h-20 w-48 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, { notes: event.target.value })} value={role.notes ?? ""} /></td>
                   <td className="px-3 py-3">
                     <button
-                      className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-3 py-2 font-semibold text-slate-950 transition-all duration-200 hover:bg-cyan-400 disabled:opacity-70"
+                      className="inline-flex items-center gap-2 rounded-lg bg-[var(--accent-primary)] px-3 py-2 font-semibold text-[var(--text-on-accent)] transition-all duration-200 hover:bg-[var(--accent-primary-strong)] disabled:opacity-70"
                       disabled={savingId === role.id}
                       onClick={async () => {
                         setError("");

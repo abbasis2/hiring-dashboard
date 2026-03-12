@@ -38,7 +38,7 @@ export default function ExcelUpload() {
 
   return (
     <label className="card-shell flex cursor-pointer flex-col items-center justify-center gap-3 border-dashed text-center hover:bg-[var(--bg-elevated)]">
-      <UploadCloud className="h-8 w-8 text-cyan-400" />
+      <UploadCloud className="h-8 w-8 text-[var(--accent-primary)]" />
       <div>
         <p className="font-semibold">Upload workbook</p>
         <p className="text-sm text-[var(--text-secondary)]">Replace the web app data with the Outstanding Roles and Filled Roles tabs from Excel.</p>
