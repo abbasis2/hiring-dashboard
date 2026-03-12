@@ -1,10 +1,12 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from collections import defaultdict
 from datetime import date
+import re
 from typing import Any, Iterable
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import FilledRole, Job, OutstandingRole
@@ -22,6 +24,8 @@ JOB_SEED = [
     {"role_title": "Associate AI Engineer", "department": "Team 27", "location": "Lahore", "employment_type": "Full-time", "status": "open", "description": "Drive applied AI delivery across hiring workflows.", "requirements": "Python, FastAPI, SQL, cloud fundamentals."},
     {"role_title": "Recruitment Operations Analyst", "department": "Talent", "location": "Islamabad", "employment_type": "Full-time", "status": "draft", "description": "Own hiring reporting and stakeholder coordination.", "requirements": "Excel, analytics, communication."},
 ]
+
+JOB_ID_PATTERN = re.compile(r"^JOB-(\d+)$", re.IGNORECASE)
 
 
 def clean_text(value: Any) -> str:
@@ -41,7 +45,7 @@ def clean_int(value: Any) -> int | None:
 
 def as_percent(numerator: int, denominator: int) -> str:
     if denominator <= 0:
-        return "—"
+        return "-"
     return f"{round((numerator / denominator) * 100):.0f}%"
 
 
@@ -79,6 +83,52 @@ def normalize_filled_seed(record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _job_id_state(values: Iterable[str]) -> tuple[int, int]:
+    max_suffix = 0
+    width = 3
+    for value in values:
+        match = JOB_ID_PATTERN.match(clean_text(value))
+        if match:
+            suffix_digits = match.group(1)
+            max_suffix = max(max_suffix, int(suffix_digits))
+            width = max(width, len(suffix_digits))
+    return max_suffix, width
+
+
+def _format_job_id(suffix: int, width: int) -> str:
+    return f"JOB-{suffix:0{width}d}"
+
+
+async def _ensure_outstanding_job_ids(session: AsyncSession) -> int:
+    missing_ids = list(
+        await session.scalars(
+            select(OutstandingRole).where(
+                or_(
+                    OutstandingRole.job_id == "",
+                    func.trim(OutstandingRole.job_id) == "",
+                )
+            )
+        )
+    )
+    if not missing_ids:
+        return 0
+
+    existing_job_ids = list(await session.scalars(select(OutstandingRole.job_id)))
+    max_suffix, width = _job_id_state(existing_job_ids)
+    next_suffix = max_suffix + 1
+    for role in missing_ids:
+        role.job_id = _format_job_id(next_suffix, width)
+        next_suffix += 1
+    await session.commit()
+    return len(missing_ids)
+
+
+async def _next_outstanding_job_id(session: AsyncSession) -> str:
+    existing_job_ids = list(await session.scalars(select(OutstandingRole.job_id)))
+    max_suffix, width = _job_id_state(existing_job_ids)
+    return _format_job_id(max_suffix + 1, width)
+
+
 async def seed_database(session: AsyncSession) -> None:
     outstanding_count = await session.scalar(select(func.count()).select_from(OutstandingRole))
     filled_count = await session.scalar(select(func.count()).select_from(FilledRole))
@@ -101,6 +151,7 @@ async def list_outstanding_roles(
     page: int = 1,
     size: int = 50,
 ) -> tuple[list[OutstandingRole], int]:
+    await _ensure_outstanding_job_ids(session)
     query = select(OutstandingRole).order_by(OutstandingRole.job_id)
     total_query = select(func.count()).select_from(OutstandingRole)
     filters: list[Any] = []
@@ -129,7 +180,25 @@ async def update_outstanding_role(session: AsyncSession, role: OutstandingRole, 
 
 
 async def create_outstanding_role(session: AsyncSession, payload: OutstandingRoleCreate) -> OutstandingRole:
-    role = OutstandingRole(**payload.model_dump())
+    payload_data = payload.model_dump()
+    requested_job_id = clean_text(payload_data.get("job_id"))
+
+    if not requested_job_id:
+        await _ensure_outstanding_job_ids(session)
+        for _ in range(5):
+            payload_data["job_id"] = await _next_outstanding_job_id(session)
+            role = OutstandingRole(**payload_data)
+            session.add(role)
+            try:
+                await session.commit()
+                await session.refresh(role)
+                return role
+            except IntegrityError:
+                await session.rollback()
+        raise RuntimeError("Unable to generate a unique job ID")
+
+    payload_data["job_id"] = requested_job_id
+    role = OutstandingRole(**payload_data)
     session.add(role)
     await session.commit()
     await session.refresh(role)
