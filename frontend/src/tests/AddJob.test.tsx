@@ -6,6 +6,19 @@ import AddJob from "../pages/AddJob";
 
 vi.mock("../api/client", () => ({
   default: {
+    get: vi.fn().mockResolvedValue({
+      data: {
+        data: {
+          team: [{ id: 1, field_key: "team", value: "Team D", sort_order: 0, is_active: true }],
+          location: [{ id: 2, field_key: "location", value: "CN/Lahore", sort_order: 0, is_active: true }],
+          departure_type: [{ id: 3, field_key: "departure_type", value: "Backfill", sort_order: 0, is_active: true }],
+          outstanding_status: [{ id: 4, field_key: "outstanding_status", value: "Sourcing", sort_order: 0, is_active: true }],
+          active_inactive: [{ id: 5, field_key: "active_inactive", value: "Active", sort_order: 0, is_active: true }],
+          filled_status: [{ id: 6, field_key: "filled_status", value: "Started", sort_order: 0, is_active: true }]
+        },
+        meta: { total: 6, page: 1 }
+      }
+    }),
     post: vi.fn().mockResolvedValue({
       data: {
         data: {

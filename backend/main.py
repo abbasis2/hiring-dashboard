@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import os
@@ -17,6 +17,7 @@ from .excel_parser import parse_excel_workbook
 from .routers.dashboard import router as dashboard_router
 from .routers.filled_roles import router as filled_roles_router
 from .routers.jobs import router as jobs_router
+from .routers.master_options import router as master_options_router
 from .routers.positions import router as positions_router
 
 DEFAULT_ORIGINS = [
@@ -83,6 +84,7 @@ app.include_router(positions_router)
 app.include_router(filled_roles_router)
 app.include_router(jobs_router)
 app.include_router(dashboard_router)
+app.include_router(master_options_router)
 
 
 @app.get("/api/health")

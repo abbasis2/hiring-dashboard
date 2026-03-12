@@ -99,3 +99,24 @@ async def test_auto_generated_job_ids_are_unique_and_increment(client):
     second_id = second.json()['data']['job_id']
     assert first_id != second_id
     assert _suffix(second_id) == _suffix(first_id) + 1
+
+
+async def test_latest_created_position_is_listed_first(client):
+    create = await client.post(
+        '/api/positions',
+        json={
+            'job_id': '',
+            'role_title': 'Newest Position',
+            'team': 'Team 27',
+            'location': 'Lahore',
+            'departure_type': 'Backfill',
+            'status': 'Sourcing',
+            'active_inactive': 'Active',
+        },
+    )
+    assert create.status_code == 201
+    created_id = create.json()['data']['id']
+
+    listing = await client.get('/api/positions')
+    assert listing.status_code == 200
+    assert listing.json()['data'][0]['id'] == created_id

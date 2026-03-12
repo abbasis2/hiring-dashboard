@@ -10,7 +10,19 @@ import OutstandingPositions from "./pages/OutstandingPositions";
 import Positions from "./pages/Positions";
 import UploadPage from "./pages/UploadPage";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      gcTime: 10 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+    mutations: {
+      retry: 0,
+    },
+  },
+});
 
 function App() {
   return (

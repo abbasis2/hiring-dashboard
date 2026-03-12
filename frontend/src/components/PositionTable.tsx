@@ -2,21 +2,15 @@ import { AxiosError } from "axios";
 import { Save } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import {
-  ACTIVE_STATUS_OPTIONS,
-  DEPARTURE_TYPE_OPTIONS,
-  LOCATION_OPTIONS,
-  OUTSTANDING_STATUS_OPTIONS,
-  TEAM_OPTIONS,
-} from "../constants";
-import type { OutstandingRole } from "../types";
+import type { DropdownOptions, OutstandingRole } from "../types";
 
 type Props = {
   roles: OutstandingRole[];
+  options: DropdownOptions;
   onSave: (roleId: number, values: Partial<OutstandingRole>) => Promise<void>;
 };
 
-export default function PositionTable({ roles, onSave }: Props) {
+export default function PositionTable({ roles, options, onSave }: Props) {
   const [drafts, setDrafts] = useState<Record<number, OutstandingRole>>({});
   const [savingId, setSavingId] = useState<number | null>(null);
   const [error, setError] = useState<string>("");
@@ -92,17 +86,17 @@ export default function PositionTable({ roles, onSave }: Props) {
                   <td className="px-3 py-3 font-medium">{role.job_id}</td>
                   <td className="px-3 py-3">{textInput(role, "role_title", "w-56")}</td>
                   <td className="px-3 py-3">{textInput(role, "link_to_jd", "w-64")}</td>
-                  <td className="px-3 py-3">{selectInput(role, "team", TEAM_OPTIONS, "w-48")}</td>
-                  <td className="px-3 py-3">{selectInput(role, "location", LOCATION_OPTIONS, "w-44")}</td>
+                  <td className="px-3 py-3">{selectInput(role, "team", options.team, "w-48")}</td>
+                  <td className="px-3 py-3">{selectInput(role, "location", options.location, "w-44")}</td>
                   <td className="px-3 py-3"><textarea className="min-h-20 w-72 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, "backfill_reason", event.target.value)} value={role.backfill_reason} /></td>
-                  <td className="px-3 py-3">{selectInput(role, "departure_type", DEPARTURE_TYPE_OPTIONS, "w-36")}</td>
+                  <td className="px-3 py-3">{selectInput(role, "departure_type", options.departure_type, "w-36")}</td>
                   <td className="px-3 py-3"><input className="w-32 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, "start_date", event.target.value)} type="date" value={role.start_date ?? ""} /></td>
-                  <td className="px-3 py-3">{selectInput(role, "status", OUTSTANDING_STATUS_OPTIONS, "w-32")}</td>
+                  <td className="px-3 py-3">{selectInput(role, "status", options.outstanding_status, "w-32")}</td>
                   <td className="px-3 py-3"><input className="w-20 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, "internal_shortlisted", event.target.value)} type="number" value={role.internal_shortlisted ?? ""} /></td>
                   <td className="px-3 py-3"><input className="w-20 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, "interviews_completed", event.target.value)} type="number" value={role.interviews_completed ?? ""} /></td>
                   <td className="px-3 py-3"><input className="w-20 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, "interviews_pending", event.target.value)} type="number" value={role.interviews_pending ?? ""} /></td>
                   <td className="px-3 py-3"><input className="w-32 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, "date_filled", event.target.value)} type="date" value={/^\d{4}-\d{2}-\d{2}$/.test(role.date_filled ?? "") ? role.date_filled : ""} /></td>
-                  <td className="px-3 py-3">{selectInput(role, "active_inactive", ACTIVE_STATUS_OPTIONS, "w-28")}</td>
+                  <td className="px-3 py-3">{selectInput(role, "active_inactive", options.active_inactive, "w-28")}</td>
                   <td className="px-3 py-3">
                     <button
                       className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-3 py-2 font-semibold text-slate-950 transition-all duration-200 hover:bg-cyan-400 disabled:opacity-70"

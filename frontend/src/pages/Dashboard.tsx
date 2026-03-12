@@ -1,4 +1,4 @@
-﻿import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Activity, ClipboardList, Clock3, Percent, Target, UserCheck, UsersRound } from "lucide-react";
 
 import client from "../api/client";
@@ -85,7 +85,13 @@ function TeamTable({ rows }: { rows: TeamBreakdown[] }) {
 }
 
 export default function Dashboard() {
-  const query = useQuery({ queryKey: ["dashboard-stats"], queryFn: fetchStats });
+  const query = useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: fetchStats,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    placeholderData: (previous) => previous,
+  });
 
   if (query.isLoading || !query.data) {
     return <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 7 }).map((_, index) => <div key={index} className="card-shell h-40 animate-pulse bg-[var(--bg-surface)]" />)}</div>;

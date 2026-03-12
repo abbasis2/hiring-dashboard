@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from datetime import datetime
 from typing import Any, Generic, TypeVar
@@ -21,18 +21,18 @@ class Envelope(BaseModel, Generic[T]):
 class OutstandingRoleBase(BaseModel):
     job_id: str = Field(min_length=1, max_length=32)
     role_title: str = Field(min_length=1, max_length=255)
-    link_to_jd: str = Field(default="")
-    team: str = Field(default="")
-    location: str = Field(default="")
-    backfill_reason: str = Field(default="")
-    departure_type: str = Field(default="")
-    start_date: str = Field(default="")
-    status: str = Field(default="Sourcing")
-    internal_shortlisted: int | None = None
-    interviews_completed: int | None = None
-    interviews_pending: int | None = None
-    date_filled: str = Field(default="")
-    active_inactive: str = Field(default="Active")
+    link_to_jd: str = Field(default="", max_length=5000)
+    team: str = Field(default="", max_length=255)
+    location: str = Field(default="", max_length=255)
+    backfill_reason: str = Field(default="", max_length=5000)
+    departure_type: str = Field(default="", max_length=64)
+    start_date: str = Field(default="", max_length=64)
+    status: str = Field(default="Sourcing", max_length=64)
+    internal_shortlisted: int | None = Field(default=None, ge=0)
+    interviews_completed: int | None = Field(default=None, ge=0)
+    interviews_pending: int | None = Field(default=None, ge=0)
+    date_filled: str = Field(default="", max_length=64)
+    active_inactive: str = Field(default="Active", max_length=32)
 
 
 class OutstandingRoleCreate(OutstandingRoleBase):
@@ -40,19 +40,19 @@ class OutstandingRoleCreate(OutstandingRoleBase):
 
 
 class OutstandingRoleUpdate(BaseModel):
-    role_title: str | None = None
-    link_to_jd: str | None = None
-    team: str | None = None
-    location: str | None = None
-    backfill_reason: str | None = None
-    departure_type: str | None = None
-    start_date: str | None = None
-    status: str | None = None
-    internal_shortlisted: int | None = None
-    interviews_completed: int | None = None
-    interviews_pending: int | None = None
-    date_filled: str | None = None
-    active_inactive: str | None = None
+    role_title: str | None = Field(default=None, min_length=1, max_length=255)
+    link_to_jd: str | None = Field(default=None, max_length=5000)
+    team: str | None = Field(default=None, max_length=255)
+    location: str | None = Field(default=None, max_length=255)
+    backfill_reason: str | None = Field(default=None, max_length=5000)
+    departure_type: str | None = Field(default=None, max_length=64)
+    start_date: str | None = Field(default=None, max_length=64)
+    status: str | None = Field(default=None, max_length=64)
+    internal_shortlisted: int | None = Field(default=None, ge=0)
+    interviews_completed: int | None = Field(default=None, ge=0)
+    interviews_pending: int | None = Field(default=None, ge=0)
+    date_filled: str | None = Field(default=None, max_length=64)
+    active_inactive: str | None = Field(default=None, max_length=32)
 
 
 class OutstandingRoleRead(OutstandingRoleBase):
@@ -66,14 +66,14 @@ class OutstandingRoleRead(OutstandingRoleBase):
 class FilledRoleBase(BaseModel):
     job_id: str = Field(min_length=1, max_length=32)
     role_title: str = Field(min_length=1, max_length=255)
-    team: str = Field(default="")
-    location: str = Field(default="")
-    backfill_reason: str = Field(default="")
-    departure_type: str = Field(default="")
-    hired_name: str = Field(default="")
-    start_date: str = Field(default="")
-    status: str = Field(default="")
-    notes: str = Field(default="")
+    team: str = Field(default="", max_length=255)
+    location: str = Field(default="", max_length=255)
+    backfill_reason: str = Field(default="", max_length=5000)
+    departure_type: str = Field(default="", max_length=64)
+    hired_name: str = Field(default="", max_length=255)
+    start_date: str = Field(default="", max_length=64)
+    status: str = Field(default="", max_length=64)
+    notes: str = Field(default="", max_length=5000)
 
 
 class FilledRoleCreate(FilledRoleBase):
@@ -81,15 +81,15 @@ class FilledRoleCreate(FilledRoleBase):
 
 
 class FilledRoleUpdate(BaseModel):
-    role_title: str | None = None
-    team: str | None = None
-    location: str | None = None
-    backfill_reason: str | None = None
-    departure_type: str | None = None
-    hired_name: str | None = None
-    start_date: str | None = None
-    status: str | None = None
-    notes: str | None = None
+    role_title: str | None = Field(default=None, min_length=1, max_length=255)
+    team: str | None = Field(default=None, max_length=255)
+    location: str | None = Field(default=None, max_length=255)
+    backfill_reason: str | None = Field(default=None, max_length=5000)
+    departure_type: str | None = Field(default=None, max_length=64)
+    hired_name: str | None = Field(default=None, max_length=255)
+    start_date: str | None = Field(default=None, max_length=64)
+    status: str | None = Field(default=None, max_length=64)
+    notes: str | None = Field(default=None, max_length=5000)
 
 
 class FilledRoleRead(FilledRoleBase):
@@ -181,3 +181,17 @@ class ExcelUploadResult(BaseModel):
     skipped: int
     outstanding_roles: list[dict[str, Any]]
     filled_roles: list[dict[str, Any]]
+
+
+class MasterOptionRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    field_key: str
+    value: str
+    sort_order: int
+    is_active: bool
+
+
+class MasterOptionCreate(BaseModel):
+    value: str = Field(min_length=1, max_length=255)

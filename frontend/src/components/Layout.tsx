@@ -17,7 +17,7 @@ export default function Layout({ children }: PropsWithChildren) {
   return (
     <div className="flex min-h-screen">
       <aside
-        className={`border-r border-[var(--border)] bg-[color:rgba(6,13,31,0.92)] px-3 py-4 transition-all duration-200 ${collapsed ? "w-20" : "w-72"}`}
+        className={`border-r border-[var(--border)] bg-[color:rgba(10,20,38,0.95)] px-3 py-4 transition-all duration-200 ${collapsed ? "w-20" : "w-72"}`}
       >
         <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-3">
           <div className="flex items-center gap-3 overflow-hidden">
@@ -33,7 +33,7 @@ export default function Layout({ children }: PropsWithChildren) {
           </div>
           <button
             aria-label="Toggle navigation"
-            className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] p-2 transition-all duration-200 hover:bg-slate-800"
+            className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] p-2 transition-all duration-200 hover:bg-[#223452]"
             onClick={() => setCollapsed((value) => !value)}
             type="button"
           >
@@ -47,7 +47,7 @@ export default function Layout({ children }: PropsWithChildren) {
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-medium transition-all duration-200 ${
                   isActive
-                    ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-300"
+                    ? "border-sky-400/45 bg-sky-400/12 text-sky-200"
                     : "border-transparent text-[var(--text-secondary)] hover:border-[var(--border)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
                 }`
               }

@@ -2,15 +2,15 @@ import { AxiosError } from "axios";
 import { Save } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { DEPARTURE_TYPE_OPTIONS, FILLED_STATUS_OPTIONS, LOCATION_OPTIONS, TEAM_OPTIONS } from "../constants";
-import type { FilledRole } from "../types";
+import type { DropdownOptions, FilledRole } from "../types";
 
 type Props = {
   roles: FilledRole[];
+  options: DropdownOptions;
   onSave: (roleId: number, values: Partial<FilledRole>) => Promise<void>;
 };
 
-export default function FilledRolesTable({ roles, onSave }: Props) {
+export default function FilledRolesTable({ roles, options, onSave }: Props) {
   const [drafts, setDrafts] = useState<Record<number, FilledRole>>({});
   const [savingId, setSavingId] = useState<number | null>(null);
   const [error, setError] = useState<string>("");
@@ -57,13 +57,13 @@ export default function FilledRolesTable({ roles, onSave }: Props) {
                 <tr key={role.id} className="align-top transition-all duration-200 hover:bg-[var(--bg-elevated)]">
                   <td className="px-3 py-3 font-medium">{role.job_id}</td>
                   <td className="px-3 py-3"><input className="w-48 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, { role_title: event.target.value })} value={role.role_title} /></td>
-                  <td className="px-3 py-3"><select className="w-40 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, { team: event.target.value })} value={role.team}>{TEAM_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}</select></td>
-                  <td className="px-3 py-3"><select className="w-36 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, { location: event.target.value })} value={role.location}>{LOCATION_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}</select></td>
+                  <td className="px-3 py-3"><select className="w-40 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, { team: event.target.value })} value={role.team}>{options.team.map((option) => <option key={option} value={option}>{option}</option>)}</select></td>
+                  <td className="px-3 py-3"><select className="w-36 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, { location: event.target.value })} value={role.location}>{options.location.map((option) => <option key={option} value={option}>{option}</option>)}</select></td>
                   <td className="px-3 py-3"><textarea className="min-h-20 w-64 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, { backfill_reason: event.target.value })} value={role.backfill_reason} /></td>
-                  <td className="px-3 py-3"><select className="w-32 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, { departure_type: event.target.value })} value={role.departure_type}>{DEPARTURE_TYPE_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}</select></td>
+                  <td className="px-3 py-3"><select className="w-32 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, { departure_type: event.target.value })} value={role.departure_type}>{options.departure_type.map((option) => <option key={option} value={option}>{option}</option>)}</select></td>
                   <td className="px-3 py-3"><input className="w-40 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, { hired_name: event.target.value })} value={role.hired_name} /></td>
                   <td className="px-3 py-3"><input className="w-32 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, { start_date: event.target.value })} type="date" value={role.start_date ?? ""} /></td>
-                  <td className="px-3 py-3"><select className="w-36 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, { status: event.target.value })} value={role.status ?? ""}>{FILLED_STATUS_OPTIONS.map((option) => <option key={option || "blank"} value={option}>{option || "Blank"}</option>)}</select></td>
+                  <td className="px-3 py-3"><select className="w-36 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, { status: event.target.value })} value={role.status ?? ""}><option key="__blank" value="">Blank</option>{options.filled_status.map((option) => <option key={option} value={option}>{option}</option>)}</select></td>
                   <td className="px-3 py-3"><textarea className="min-h-20 w-48 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, { notes: event.target.value })} value={role.notes ?? ""} /></td>
                   <td className="px-3 py-3">
                     <button

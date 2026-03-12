@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 
 async def test_dashboard_stats_returns_excel_summary_fields(client):

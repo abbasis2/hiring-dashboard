@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { useMasterOptions } from "../api/masterOptions";
 import client from "../api/client";
 import FilledRolesTable from "../components/FilledRolesTable";
 import type { ApiResponse, FilledRole } from "../types";
@@ -14,7 +15,14 @@ async function fetchFilledRoles() {
 export default function FilledPositions() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const filledQuery = useQuery({ queryKey: ["filled-roles"], queryFn: fetchFilledRoles });
+  const optionsQuery = useMasterOptions();
+  const filledQuery = useQuery({
+    queryKey: ["filled-roles"],
+    queryFn: fetchFilledRoles,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    placeholderData: (previous) => previous,
+  });
 
   const updateFilled = useMutation({
     mutationFn: async ({ roleId, values }: { roleId: number; values: Partial<FilledRole> }) => {
@@ -43,7 +51,20 @@ export default function FilledPositions() {
           <input className="w-full bg-transparent outline-none" onChange={(event) => setSearch(event.target.value)} placeholder="Search by job id, role, team, location, or hire" value={search} />
         </label>
       </section>
-      {filledQuery.isLoading ? <div className="card-shell h-64 animate-pulse" /> : <FilledRolesTable roles={filledRoles} onSave={async (roleId, values) => updateFilled.mutateAsync({ roleId, values })} />}
+      {filledQuery.isError ? (
+        <div className="card-shell border-red-500/30 bg-red-500/10 text-sm text-red-200">
+          Unable to load filled positions. Please refresh and try again.
+        </div>
+      ) : null}
+      {filledQuery.isLoading || !optionsQuery.data ? (
+        <div className="card-shell h-64 animate-pulse" />
+      ) : (
+        <FilledRolesTable
+          options={optionsQuery.data}
+          roles={filledRoles}
+          onSave={async (roleId, values) => updateFilled.mutateAsync({ roleId, values })}
+        />
+      )}
     </div>
   );
 }

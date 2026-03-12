@@ -1,11 +1,13 @@
-﻿import { render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 
+import { DEFAULT_DROPDOWN_OPTIONS } from '../constants';
 import PositionTable from '../components/PositionTable';
 
 describe('PositionTable', () => {
   it('renders workbook field headers', () => {
     render(
       <PositionTable
+        options={DEFAULT_DROPDOWN_OPTIONS}
         roles={[
           {
             id: 1,

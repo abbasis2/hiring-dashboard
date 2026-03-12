@@ -3,13 +3,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { useMasterOptions } from "../api/masterOptions";
 import client from "../api/client";
+import MasterOptionsManager from "../components/MasterOptionsManager";
 import {
-  ACTIVE_STATUS_OPTIONS,
-  DEPARTURE_TYPE_OPTIONS,
-  LOCATION_OPTIONS,
-  OUTSTANDING_STATUS_OPTIONS,
-  TEAM_OPTIONS,
+  DEFAULT_DROPDOWN_OPTIONS,
 } from "../constants";
 import type { ApiResponse, OutstandingRole } from "../types";
 
@@ -39,6 +37,8 @@ type FormValues = z.infer<typeof schema>;
 
 export default function AddJob() {
   const queryClient = useQueryClient();
+  const optionsQuery = useMasterOptions();
+  const options = optionsQuery.data ?? DEFAULT_DROPDOWN_OPTIONS;
   const {
     register,
     handleSubmit,
@@ -49,17 +49,17 @@ export default function AddJob() {
       job_id: "",
       role_title: "",
       link_to_jd: "",
-      team: TEAM_OPTIONS[0],
-      location: LOCATION_OPTIONS[0],
+      team: options.team[0] ?? "",
+      location: options.location[0] ?? "",
       backfill_reason: "",
-      departure_type: DEPARTURE_TYPE_OPTIONS[0],
+      departure_type: options.departure_type[0] ?? "Backfill",
       start_date: "",
-      status: OUTSTANDING_STATUS_OPTIONS[0],
+      status: options.outstanding_status[0] ?? "Sourcing",
       internal_shortlisted: null,
       interviews_completed: null,
       interviews_pending: null,
       date_filled: "",
-      active_inactive: ACTIVE_STATUS_OPTIONS[0],
+      active_inactive: options.active_inactive[0] ?? "Active",
     }
   });
 
@@ -106,7 +106,7 @@ export default function AddJob() {
           <label className="space-y-2">
             <span className="text-sm text-[var(--text-secondary)]">Team</span>
             <select className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3" {...register("team")}>
-              {TEAM_OPTIONS.map((option) => (
+              {options.team.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
@@ -116,7 +116,7 @@ export default function AddJob() {
           <label className="space-y-2">
             <span className="text-sm text-[var(--text-secondary)]">Location</span>
             <select className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3" {...register("location")}>
-              {LOCATION_OPTIONS.map((option) => (
+              {options.location.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
@@ -126,7 +126,7 @@ export default function AddJob() {
           <label className="space-y-2">
             <span className="text-sm text-[var(--text-secondary)]">Departure Type</span>
             <select className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3" {...register("departure_type")}>
-              {DEPARTURE_TYPE_OPTIONS.map((option) => (
+              {options.departure_type.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
@@ -144,7 +144,7 @@ export default function AddJob() {
           <label className="space-y-2">
             <span className="text-sm text-[var(--text-secondary)]">Status</span>
             <select className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3" {...register("status")}>
-              {OUTSTANDING_STATUS_OPTIONS.map((option) => (
+              {options.outstanding_status.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
@@ -170,7 +170,7 @@ export default function AddJob() {
           <label className="space-y-2">
             <span className="text-sm text-[var(--text-secondary)]">Active / Inactive</span>
             <select className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3" {...register("active_inactive")}>
-              {ACTIVE_STATUS_OPTIONS.map((option) => (
+              {options.active_inactive.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
@@ -178,6 +178,7 @@ export default function AddJob() {
             </select>
           </label>
         </div>
+        <MasterOptionsManager optionsByField={options} />
         <div className="flex items-center gap-4">
           <button className="rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 transition-all duration-200 hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-70" disabled={mutation.isPending} type="submit">
             {mutation.isPending ? "Saving..." : "Create Position"}

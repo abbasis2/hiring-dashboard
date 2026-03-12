@@ -1,4 +1,4 @@
-﻿export type Meta = {
+export type Meta = {
   total: number;
   page: number;
 };
@@ -108,3 +108,23 @@ export type JobFormValues = {
   description: string;
   requirements: string;
 };
+
+export type MasterFieldKey =
+  | "team"
+  | "location"
+  | "departure_type"
+  | "outstanding_status"
+  | "active_inactive"
+  | "filled_status";
+
+export type MasterOption = {
+  id: number;
+  field_key: MasterFieldKey;
+  value: string;
+  sort_order: number;
+  is_active: boolean;
+};
+
+export type MasterOptionsMap = Record<MasterFieldKey, MasterOption[]>;
+
+export type DropdownOptions = Record<MasterFieldKey, string[]>;

@@ -9,7 +9,7 @@ from sqlalchemy import delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import FilledRole, Job, OutstandingRole
+from .models import FilledRole, Job, MasterOption, OutstandingRole
 from .schemas import (
     FilledRoleCreate,
     FilledRoleUpdate,
@@ -26,6 +26,47 @@ JOB_SEED = [
 ]
 
 JOB_ID_PATTERN = re.compile(r"^JOB-(\d+)$", re.IGNORECASE)
+MASTER_OPTION_DEFAULTS: dict[str, list[str]] = {
+    "team": [
+        "Team D",
+        "Team 27",
+        "Team 10",
+        "Team 19",
+        "Team 23",
+        "Team 19/23/27 (Generate)",
+        "Team 35",
+        "Team 28",
+        "Team A",
+        "Team 3",
+        "Team K",
+        "SAP S/4 - Team 8",
+    ],
+    "location": [
+        "CN/Lahore",
+        "CN/Lahore - South America",
+        "ISSM/Islamabad",
+    ],
+    "departure_type": [
+        "Backfill",
+        "Attrition",
+        "Termination",
+        "New / Reallocation",
+    ],
+    "outstanding_status": [
+        "Sourcing",
+        "Interviewing",
+        "Offer",
+        "Filled",
+    ],
+    "active_inactive": [
+        "Active",
+        "Inactive",
+    ],
+    "filled_status": [
+        "Offer Accepted",
+        "Started",
+    ],
+}
 
 
 def clean_text(value: Any) -> str:
@@ -129,6 +170,49 @@ async def _next_outstanding_job_id(session: AsyncSession) -> str:
     return _format_job_id(max_suffix + 1, width)
 
 
+async def _ensure_master_options(session: AsyncSession) -> int:
+    existing_options = list(await session.scalars(select(MasterOption)))
+    existing_pairs = {(option.field_key, option.value) for option in existing_options}
+    inserted = 0
+
+    def add_option(field_key: str, value: str, sort_order: int) -> None:
+        nonlocal inserted
+        clean_value = clean_text(value)
+        if not clean_value:
+            return
+        pair = (field_key, clean_value)
+        if pair in existing_pairs:
+            return
+        session.add(MasterOption(field_key=field_key, value=clean_value, sort_order=sort_order, is_active=True))
+        existing_pairs.add(pair)
+        inserted += 1
+
+    # Seed explicit defaults
+    for field_key, values in MASTER_OPTION_DEFAULTS.items():
+        for index, value in enumerate(values):
+            add_option(field_key, value, index)
+
+    # Ensure existing data values are also available in dropdown masters.
+    outstanding_rows = list(await session.scalars(select(OutstandingRole)))
+    filled_rows = list(await session.scalars(select(FilledRole)))
+    sync_values: dict[str, list[str]] = {
+        "team": [row.team for row in outstanding_rows] + [row.team for row in filled_rows],
+        "location": [row.location for row in outstanding_rows] + [row.location for row in filled_rows],
+        "departure_type": [row.departure_type for row in outstanding_rows] + [row.departure_type for row in filled_rows],
+        "outstanding_status": [row.status for row in outstanding_rows],
+        "active_inactive": [row.active_inactive for row in outstanding_rows],
+        "filled_status": [row.status for row in filled_rows],
+    }
+    for field_key, values in sync_values.items():
+        base_sort = len(MASTER_OPTION_DEFAULTS.get(field_key, []))
+        for index, value in enumerate(sorted({clean_text(v) for v in values if clean_text(v)})):
+            add_option(field_key, value, base_sort + index)
+
+    if inserted:
+        await session.commit()
+    return inserted
+
+
 async def seed_database(session: AsyncSession) -> None:
     outstanding_count = await session.scalar(select(func.count()).select_from(OutstandingRole))
     filled_count = await session.scalar(select(func.count()).select_from(FilledRole))
@@ -141,6 +225,8 @@ async def seed_database(session: AsyncSession) -> None:
     if not job_count:
         session.add_all([Job(**payload) for payload in JOB_SEED])
     await session.commit()
+    await _ensure_outstanding_job_ids(session)
+    await _ensure_master_options(session)
 
 
 async def list_outstanding_roles(
@@ -152,7 +238,7 @@ async def list_outstanding_roles(
     size: int = 50,
 ) -> tuple[list[OutstandingRole], int]:
     await _ensure_outstanding_job_ids(session)
-    query = select(OutstandingRole).order_by(OutstandingRole.job_id)
+    query = select(OutstandingRole).order_by(OutstandingRole.created_at.desc(), OutstandingRole.id.desc())
     total_query = select(func.count()).select_from(OutstandingRole)
     filters: list[Any] = []
     if dept:
@@ -200,13 +286,17 @@ async def create_outstanding_role(session: AsyncSession, payload: OutstandingRol
     payload_data["job_id"] = requested_job_id
     role = OutstandingRole(**payload_data)
     session.add(role)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise ValueError("Job ID already exists")
     await session.refresh(role)
     return role
 
 
 async def list_filled_roles(session: AsyncSession, page: int = 1, size: int = 50) -> tuple[list[FilledRole], int]:
-    query = select(FilledRole).order_by(FilledRole.job_id)
+    query = select(FilledRole).order_by(FilledRole.created_at.desc(), FilledRole.id.desc())
     total = int(await session.scalar(select(func.count()).select_from(FilledRole)) or 0)
     items = await session.scalars(query.offset((page - 1) * size).limit(size))
     return list(items), total
@@ -280,6 +370,56 @@ async def update_job(session: AsyncSession, job: Job, payload: JobUpdate) -> Job
     return job
 
 
+def is_supported_master_field(field_key: str) -> bool:
+    return field_key in MASTER_OPTION_DEFAULTS
+
+
+async def list_master_options(session: AsyncSession, field_key: str | None = None) -> dict[str, list[MasterOption]]:
+    await _ensure_master_options(session)
+    query = select(MasterOption).where(MasterOption.is_active.is_(True))
+    if field_key:
+        query = query.where(MasterOption.field_key == field_key)
+    query = query.order_by(MasterOption.field_key.asc(), MasterOption.sort_order.asc(), MasterOption.value.asc())
+    rows = list(await session.scalars(query))
+    grouped: dict[str, list[MasterOption]] = defaultdict(list)
+    for row in rows:
+        grouped[row.field_key].append(row)
+    return grouped
+
+
+async def create_master_option(session: AsyncSession, field_key: str, value: str) -> MasterOption:
+    clean_value = clean_text(value)
+    if not clean_value:
+        raise ValueError("Value is required")
+    if not is_supported_master_field(field_key):
+        raise ValueError("Unsupported master field")
+
+    existing = await session.scalar(
+        select(MasterOption).where(
+            MasterOption.field_key == field_key,
+            func.lower(MasterOption.value) == clean_value.lower(),
+        )
+    )
+    if existing is not None:
+        raise ValueError("Value already exists")
+
+    max_order = await session.scalar(select(func.max(MasterOption.sort_order)).where(MasterOption.field_key == field_key))
+    option = MasterOption(
+        field_key=field_key,
+        value=clean_value,
+        sort_order=int(max_order or 0) + 1,
+        is_active=True,
+    )
+    session.add(option)
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise ValueError("Value already exists")
+    await session.refresh(option)
+    return option
+
+
 async def dashboard_stats(session: AsyncSession) -> dict[str, Any]:
     outstanding_roles = list(await session.scalars(select(OutstandingRole).order_by(OutstandingRole.job_id)))
     filled_roles = list(await session.scalars(select(FilledRole).order_by(FilledRole.job_id)))
@@ -290,9 +430,9 @@ async def dashboard_stats(session: AsyncSession) -> dict[str, Any]:
         "active_open": len(active_roles),
         "filled": len(filled_roles),
         "fill_rate": as_percent(len(filled_roles), len(outstanding_roles)),
-        "avg_time_to_fill": "—",
-        "pipeline_conversion": "—",
-        "offer_acceptance_rate": "—",
+        "avg_time_to_fill": "-",
+        "pipeline_conversion": "-",
+        "offer_acceptance_rate": "-",
     }
 
     team_names = sorted({role.team for role in outstanding_roles if role.team} | {role.team for role in filled_roles if role.team})

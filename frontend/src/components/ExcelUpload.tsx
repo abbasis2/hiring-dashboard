@@ -1,4 +1,4 @@
-﻿import { AxiosError } from "axios";
+import { AxiosError } from "axios";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";

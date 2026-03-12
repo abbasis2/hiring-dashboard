@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from typing import Any
 
@@ -31,7 +31,10 @@ async def read_positions(
 
 @router.post("", status_code=201)
 async def add_position(payload: OutstandingRoleCreate, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
-    role = await create_outstanding_role(session, payload)
+    try:
+        role = await create_outstanding_role(session, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return envelope(OutstandingRoleRead.model_validate(role).model_dump(mode="json"), 1, 1)
 
 

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { useMasterOptions } from "../api/masterOptions";
 import client from "../api/client";
 import PositionTable from "../components/PositionTable";
 import type { ApiResponse, OutstandingRole } from "../types";
@@ -14,7 +15,14 @@ async function fetchOutstandingRoles() {
 export default function OutstandingPositions() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const outstandingQuery = useQuery({ queryKey: ["outstanding-roles"], queryFn: fetchOutstandingRoles });
+  const optionsQuery = useMasterOptions();
+  const outstandingQuery = useQuery({
+    queryKey: ["outstanding-roles"],
+    queryFn: fetchOutstandingRoles,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    placeholderData: (previous) => previous,
+  });
 
   const updateOutstanding = useMutation({
     mutationFn: async ({ roleId, values }: { roleId: number; values: Partial<OutstandingRole> }) => {
@@ -43,7 +51,20 @@ export default function OutstandingPositions() {
           <input className="w-full bg-transparent outline-none" onChange={(event) => setSearch(event.target.value)} placeholder="Search by job id, role, team, or location" value={search} />
         </label>
       </section>
-      {outstandingQuery.isLoading ? <div className="card-shell h-64 animate-pulse" /> : <PositionTable roles={outstandingRoles} onSave={async (roleId, values) => updateOutstanding.mutateAsync({ roleId, values })} />}
+      {outstandingQuery.isError ? (
+        <div className="card-shell border-red-500/30 bg-red-500/10 text-sm text-red-200">
+          Unable to load outstanding positions. Please refresh and try again.
+        </div>
+      ) : null}
+      {outstandingQuery.isLoading || !optionsQuery.data ? (
+        <div className="card-shell h-64 animate-pulse" />
+      ) : (
+        <PositionTable
+          options={optionsQuery.data}
+          roles={outstandingRoles}
+          onSave={async (roleId, values) => updateOutstanding.mutateAsync({ roleId, values })}
+        />
+      )}
     </div>
   );
 }

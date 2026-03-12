@@ -1,8 +1,8 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -71,3 +71,14 @@ class Job(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(String(32), default="open", nullable=False, index=True)
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
     requirements: Mapped[str] = mapped_column(Text, default="", nullable=False)
+
+
+class MasterOption(Base, TimestampMixin):
+    __tablename__ = "master_options"
+    __table_args__ = (UniqueConstraint("field_key", "value", name="uq_master_options_field_value"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    field_key: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    value: Mapped[str] = mapped_column(String(255), nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)

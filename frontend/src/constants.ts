@@ -1,4 +1,6 @@
-export const TEAM_OPTIONS = [
+import type { DropdownOptions, MasterFieldKey } from "./types";
+
+export const TEAM_OPTIONS: string[] = [
   "Team D",
   "Team 27",
   "Team 10",
@@ -11,28 +13,46 @@ export const TEAM_OPTIONS = [
   "Team 3",
   "Team K",
   "SAP S/4 - Team 8",
-] as const;
+];
 
-export const DEPARTURE_TYPE_OPTIONS = [
+export const DEPARTURE_TYPE_OPTIONS: string[] = [
   "Backfill",
   "Attrition",
   "Termination",
   "New / Reallocation",
-] as const;
+];
 
-export const OUTSTANDING_STATUS_OPTIONS = [
+export const OUTSTANDING_STATUS_OPTIONS: string[] = [
   "Sourcing",
   "Interviewing",
   "Offer",
   "Filled",
-] as const;
+];
 
-export const ACTIVE_STATUS_OPTIONS = ["Active", "Inactive"] as const;
+export const ACTIVE_STATUS_OPTIONS: string[] = ["Active", "Inactive"];
 
-export const FILLED_STATUS_OPTIONS = ["", "Offer Accepted", "Started"] as const;
+export const FILLED_STATUS_OPTIONS: string[] = ["Offer Accepted", "Started"];
 
-export const LOCATION_OPTIONS = [
+export const LOCATION_OPTIONS: string[] = [
   "CN/Lahore",
   "CN/Lahore - South America",
   "ISSM/Islamabad",
-] as const;
+];
+
+export const MASTER_FIELD_LABELS: Record<MasterFieldKey, string> = {
+  team: "Team",
+  location: "Location",
+  departure_type: "Departure Type",
+  outstanding_status: "Outstanding Status",
+  active_inactive: "Active / Inactive",
+  filled_status: "Filled Status",
+};
+
+export const DEFAULT_DROPDOWN_OPTIONS: DropdownOptions = {
+  team: TEAM_OPTIONS,
+  location: LOCATION_OPTIONS,
+  departure_type: DEPARTURE_TYPE_OPTIONS,
+  outstanding_status: OUTSTANDING_STATUS_OPTIONS,
+  active_inactive: ACTIVE_STATUS_OPTIONS,
+  filled_status: FILLED_STATUS_OPTIONS,
+};
