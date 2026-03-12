@@ -25,6 +25,7 @@ DEFAULT_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:3000",
 ]
+DEFAULT_ALLOWED_ORIGIN_REGEX = r"https://.*\.vercel\.app"
 
 
 def allowed_origins() -> list[str]:
@@ -33,6 +34,16 @@ def allowed_origins() -> list[str]:
         return [origin.strip() for origin in configured.split(",") if origin.strip()]
     frontend_url = os.getenv("FRONTEND_URL", "").strip()
     return [*DEFAULT_ORIGINS, *([frontend_url] if frontend_url else [])]
+
+
+def allowed_origin_regex() -> str | None:
+    configured = os.getenv("ALLOWED_ORIGIN_REGEX", "").strip()
+    if configured:
+        return configured
+    allow_vercel_preview = os.getenv("ALLOW_VERCEL_PREVIEW_ORIGINS", "true").strip().lower()
+    if allow_vercel_preview in {"0", "false", "no"}:
+        return None
+    return DEFAULT_ALLOWED_ORIGIN_REGEX
 
 
 @asynccontextmanager
@@ -46,6 +57,7 @@ app = FastAPI(title="Recruitment Dashboard API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins(),
+    allow_origin_regex=allowed_origin_regex(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
