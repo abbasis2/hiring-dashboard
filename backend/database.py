@@ -17,6 +17,8 @@ DB_PATH = BASE_DIR / "recruitment_dashboard.db"
 _engine: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
 _current_url: str | None = None
+DATABASE_URL_KEYS = ("DATABASE_URL", "POSTGRES_URL_NON_POOLING", "POSTGRES_URL")
+ASYNC_PG_DROP_QUERY_KEYS = {"pgbouncer", "connection_limit", "options", "schema"}
 
 REQUIRED_COLUMNS = {
     "outstanding_roles": {"job_id", "role_title", "team", "status", "active_inactive"},
@@ -26,7 +28,12 @@ REQUIRED_COLUMNS = {
 
 
 def _database_url() -> str:
-    configured = os.getenv("DATABASE_URL", "").strip()
+    configured = ""
+    for key in DATABASE_URL_KEYS:
+        value = os.getenv(key, "").strip()
+        if value:
+            configured = value
+            break
     if not configured:
         return f"sqlite+aiosqlite:///{DB_PATH.as_posix()}"
     if configured.startswith("postgres://"):
@@ -38,6 +45,10 @@ def _database_url() -> str:
         query = dict(parse_qsl(parts.query, keep_blank_values=True))
         if "sslmode" in query and "ssl" not in query:
             query["ssl"] = query.pop("sslmode")
+        if "connect_timeout" in query and "timeout" not in query:
+            query["timeout"] = query.pop("connect_timeout")
+        for key in ASYNC_PG_DROP_QUERY_KEYS:
+            query.pop(key, None)
         return urlunsplit(("postgresql+asyncpg", parts.netloc, parts.path, urlencode(query), parts.fragment))
     if configured.startswith("sqlite:///"):
         return configured.replace("sqlite:///", "sqlite+aiosqlite:///", 1)

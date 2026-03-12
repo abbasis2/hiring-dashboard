@@ -6,7 +6,7 @@ A full-stack hiring dashboard with FastAPI, React, Tailwind CSS, TanStack Query,
 
 1. Install backend dependencies: `cd backend && python -m pip install -r requirements.txt`
 2. Install frontend dependencies: `cd frontend && npm install`
-3. Run the backend: `cd backend && python -m uvicorn main:app --reload --port 8000`
+3. Run the backend: `cd backend && python -m uvicorn app:app --reload --port 8000`
 4. Run the frontend: `cd frontend && npm run dev`
 
 Or start both together with `bash scripts/start.sh` after both toolchains are installed.
