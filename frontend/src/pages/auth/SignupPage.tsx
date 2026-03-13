@@ -24,7 +24,7 @@ export default function SignupPage() {
         <div>
           <h1 className="text-3xl font-semibold">Sign Up</h1>
           <p className="mt-2 text-sm text-[var(--text-secondary)]">
-            Create an account and verify your email before logging in.
+            Create an account using your official 3eco email address.
           </p>
         </div>
 
@@ -36,14 +36,18 @@ export default function SignupPage() {
             setMessage("");
             setSubmitting(true);
             try {
+              const normalizedEmail = email.trim().toLowerCase();
+              if (!normalizedEmail.endsWith("@3eco.com")) {
+                setError("Please enter your 3eco email for signing up.");
+                return;
+              }
               const payload = await auth.signup({
                 email,
                 confirm_email: confirmEmail,
                 password,
               });
-              const previewCode = payload.verification_code ? ` Verification code: ${payload.verification_code}` : "";
-              setMessage(`${payload.message}${previewCode}`);
-              navigate(`/verify-email?email=${encodeURIComponent(payload.email)}`, { replace: true, state: { previewCode: payload.verification_code } });
+              setMessage(payload.message);
+              navigate("/login", { replace: true, state: { signupSuccess: payload.message } });
             } catch (err) {
               const detail =
                 err instanceof AxiosError

@@ -16,7 +16,6 @@ export type AuthContextValue = {
   isSuperAdmin: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (input: SignupInput) => Promise<AuthSignupPayload>;
-  verifyEmail: (email: string, code: string) => Promise<void>;
   refreshUser: () => Promise<void>;
   logout: () => void;
 };

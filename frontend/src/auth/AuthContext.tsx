@@ -58,10 +58,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return response.data.data;
   }, []);
 
-  const verifyEmail = useCallback(async (email: string, code: string) => {
-    await client.post("/api/auth/verify-email", { email, code });
-  }, []);
-
   const logout = useCallback(() => {
     clearAuthToken();
     setToken(null);
@@ -77,11 +73,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isSuperAdmin: user?.role === "super_admin",
       login,
       signup,
-      verifyEmail,
       refreshUser,
       logout,
     }),
-    [isLoading, login, logout, refreshUser, signup, token, user, verifyEmail]
+    [isLoading, login, logout, refreshUser, signup, token, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -18,6 +18,7 @@ export default function LoginPage() {
   }
 
   const returnTo = (location.state as { from?: string } | undefined)?.from ?? "/";
+  const signupSuccess = (location.state as { signupSuccess?: string } | undefined)?.signupSuccess;
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-10">
@@ -26,6 +27,8 @@ export default function LoginPage() {
           <h1 className="text-3xl font-semibold">Login</h1>
           <p className="mt-2 text-sm text-[var(--text-secondary)]">Enter your account credentials to access the dashboard.</p>
         </div>
+
+        {signupSuccess ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{signupSuccess}</div> : null}
 
         <form
           className="space-y-4"

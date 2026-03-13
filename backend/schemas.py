@@ -218,12 +218,6 @@ class AuthSignupRequest(BaseModel):
 class AuthSignupPayload(BaseModel):
     message: str
     email: str
-    verification_code: str | None = None
-
-
-class AuthVerifyEmailRequest(BaseModel):
-    email: str = Field(min_length=5, max_length=255)
-    code: str = Field(min_length=6, max_length=16)
 
 
 class AuthLoginRequest(BaseModel):

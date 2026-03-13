@@ -13,7 +13,6 @@ import Positions from "./pages/Positions";
 import UploadPage from "./pages/UploadPage";
 import LoginPage from "./pages/auth/LoginPage";
 import SignupPage from "./pages/auth/SignupPage";
-import VerifyEmailPage from "./pages/auth/VerifyEmailPage";
 import MasterFieldPage from "./pages/master/MasterFieldPage";
 import MasterPagesIndex from "./pages/master/MasterPagesIndex";
 import UsersPage from "./pages/UsersPage";
@@ -82,7 +81,6 @@ function AppRoutes() {
         <Route element={<PublicOnly />}>
           <Route element={<LoginPage />} path="/login" />
           <Route element={<SignupPage />} path="/signup" />
-          <Route element={<VerifyEmailPage />} path="/verify-email" />
         </Route>
 
         <Route element={<RequireAuth />}>

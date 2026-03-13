@@ -32,7 +32,6 @@ async def configure_test_db(tmp_path: Path):
     os.environ.pop("DATABASE_URL", None)
     os.environ["SUPER_ADMIN_EMAIL"] = "admin@local.test"
     os.environ["SUPER_ADMIN_PASSWORD"] = "Admin@12345"
-    os.environ["AUTH_RETURN_VERIFICATION_CODE"] = "true"
     db_module.DB_PATH = tmp_path / 'test.db'
     await db_module.init_db()
     yield

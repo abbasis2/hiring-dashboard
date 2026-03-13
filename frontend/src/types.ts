@@ -150,5 +150,4 @@ export type AuthLoginPayload = {
 export type AuthSignupPayload = {
   message: string;
   email: string;
-  verification_code: string | null;
 };

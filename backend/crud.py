@@ -21,10 +21,8 @@ from .schemas import (
 )
 from .security import (
     create_access_token,
-    generate_verification_code,
     hash_password,
     utc_now_naive,
-    verification_expiry,
     verify_password,
 )
 from .seed_data import FILLED_ROLES, OUTSTANDING_ROLES
@@ -399,7 +397,7 @@ async def get_user_by_id(session: AsyncSession, user_id: int) -> User | None:
     return await session.get(User, user_id)
 
 
-async def signup_user(session: AsyncSession, *, email: str, password: str) -> tuple[User, str]:
+async def signup_user(session: AsyncSession, *, email: str, password: str) -> User:
     normalized = normalize_email(email)
     if not normalized:
         raise ValueError("Email is required")
@@ -410,20 +408,19 @@ async def signup_user(session: AsyncSession, *, email: str, password: str) -> tu
     if existing is not None:
         raise ValueError("Email already exists")
 
-    code = generate_verification_code()
     user = User(
         email=normalized,
         password_hash=hash_password(password),
         role="user",
-        email_verified=False,
+        email_verified=True,
         is_active=True,
-        verification_code=code,
-        verification_expires_at=verification_expiry(),
+        verification_code=None,
+        verification_expires_at=None,
     )
     session.add(user)
     await session.commit()
     await session.refresh(user)
-    return user, code
+    return user
 
 
 async def verify_user_email(session: AsyncSession, *, email: str, code: str) -> User:

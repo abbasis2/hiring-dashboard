@@ -31,7 +31,6 @@ Or start both together with `bash scripts/start.sh` after both toolchains are in
 | --- | --- | --- |
 | GET | `/api/health` | Health check |
 | POST | `/api/auth/signup` | Create user account |
-| POST | `/api/auth/verify-email` | Verify email using code |
 | POST | `/api/auth/login` | Authenticate and get bearer token |
 | GET | `/api/auth/me` | Current authenticated user |
 | GET | `/api/users` | List users (super admin only) |
@@ -69,7 +68,6 @@ Backend:
 - `AUTH_TOKEN_TTL_MINUTES`: optional token expiry minutes.
 - `SUPER_ADMIN_EMAIL`: required for production. Bootstrapped super admin email.
 - `SUPER_ADMIN_PASSWORD`: required for production. Bootstrapped super admin password.
-- `AUTH_RETURN_VERIFICATION_CODE`: temporary no-SMTP mode. If `true`, signup returns verification code in API response.
 
 Frontend:
 
@@ -96,7 +94,7 @@ Backend project settings:
 - Add `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD`.
 - Add `FRONTEND_URL=https://<your-frontend>.vercel.app` and optionally:
   - `ALLOWED_ORIGIN_REGEX=https://.*\\.vercel\\.app` (for preview links)
-- If no email provider is configured yet, set `AUTH_RETURN_VERIFICATION_CODE=true` so signup/verify works.
+- Signup allows only `@3eco.com` email addresses.
 
 Backend entrypoint:
 
