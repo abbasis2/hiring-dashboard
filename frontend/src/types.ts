@@ -17,6 +17,7 @@ export type OutstandingRole = {
   location: string;
   backfill_reason: string;
   departure_type: string;
+  candidate_gender: string;
   start_date: string;
   status: string;
   internal_shortlisted: number | null;
@@ -24,6 +25,7 @@ export type OutstandingRole = {
   interviews_pending: number | null;
   date_filled: string;
   active_inactive: string;
+  reason_why_next_steps: string;
   created_at: string;
   updated_at: string;
 };
@@ -37,9 +39,28 @@ export type FilledRole = {
   backfill_reason: string;
   departure_type: string;
   hired_name: string;
+  hired_gender: string;
+  departure_event_date: string;
   start_date: string;
   status: string;
   notes: string;
+  reason_why_next_steps: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RecruitingDropout = {
+  id: number;
+  job_id: string;
+  role_title: string;
+  team: string;
+  location: string;
+  stage: string;
+  dropout_reason: string;
+  candidate_gender: string;
+  dropout_date: string;
+  reason_why_next_steps: string;
+  status: string;
   created_at: string;
   updated_at: string;
 };
@@ -91,9 +112,46 @@ export type BreakdownRow = {
   fill_rate: string;
 };
 
+export type PlutusMetaPicture = {
+  total_unique_roles: number;
+  active_outstanding: number;
+  filled_roles: number;
+  attrition_fills: number;
+  termination_fills: number;
+  dropout_events: number;
+  overall_fill_rate: string;
+};
+
+export type GenderBreakdownRow = {
+  label: string;
+  count: number;
+  percentage: string;
+};
+
+export type GenderOverview = {
+  meta: GenderBreakdownRow[];
+  pipeline: GenderBreakdownRow[];
+  results: GenderBreakdownRow[];
+};
+
+export type HeatmapRow = {
+  label: string;
+  values: number[];
+  total: number;
+};
+
+export type HeatmapPayload = {
+  months: string[];
+  rows: HeatmapRow[];
+};
+
 export type DashboardStats = {
   generated_on: string;
   summary: DashboardSummary;
+  plutus_meta: PlutusMetaPicture;
+  gender_overview: GenderOverview;
+  attrition_heatmap: HeatmapPayload;
+  dropout_heatmap: HeatmapPayload;
   by_team: TeamBreakdown[];
   departure_type_breakdown: BreakdownRow[];
   location_breakdown: BreakdownRow[];
@@ -115,7 +173,10 @@ export type MasterFieldKey =
   | "departure_type"
   | "outstanding_status"
   | "active_inactive"
-  | "filled_status";
+  | "filled_status"
+  | "gender"
+  | "dropout_stage"
+  | "dropout_reason";
 
 export type MasterOption = {
   id: number;

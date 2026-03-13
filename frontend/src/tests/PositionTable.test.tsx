@@ -18,6 +18,7 @@ describe('PositionTable', () => {
             location: 'Lahore',
             backfill_reason: 'Backfill',
             departure_type: 'Backfill',
+            candidate_gender: 'Male',
             start_date: '',
             status: 'Sourcing',
             internal_shortlisted: 4,
@@ -25,6 +26,7 @@ describe('PositionTable', () => {
             interviews_pending: 0,
             date_filled: '',
             active_inactive: 'Active',
+            reason_why_next_steps: 'Continue interviews next week.',
             created_at: '2026-03-11',
             updated_at: '2026-03-11'
           }

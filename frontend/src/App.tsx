@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import FilledPositions from "./pages/FilledPositions";
 import OutstandingPositions from "./pages/OutstandingPositions";
 import Positions from "./pages/Positions";
+import RecruitingDropouts from "./pages/RecruitingDropouts";
 import UploadPage from "./pages/UploadPage";
 import LoginPage from "./pages/auth/LoginPage";
 import SignupPage from "./pages/auth/SignupPage";
@@ -88,6 +89,7 @@ function AppRoutes() {
             <Route element={<Dashboard />} path="/" />
             <Route element={<OutstandingPositions />} path="/outstanding-positions" />
             <Route element={<FilledPositions />} path="/filled-positions" />
+            <Route element={<RecruitingDropouts />} path="/recruiting-dropouts" />
             <Route element={<AddJob />} path="/add-position" />
             <Route element={<Positions />} path="/positions" />
             <Route element={<UploadPage />} path="/upload" />

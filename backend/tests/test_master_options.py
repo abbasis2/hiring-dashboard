@@ -8,6 +8,9 @@ EXPECTED_FIELDS = {
     "outstanding_status",
     "active_inactive",
     "filled_status",
+    "gender",
+    "dropout_stage",
+    "dropout_reason",
 }
 
 

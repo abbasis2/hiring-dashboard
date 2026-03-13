@@ -32,6 +32,18 @@ REQUIRED_COLUMNS = {
     "jobs": {"role_title", "department", "status"},
 }
 
+SCHEMA_EVOLUTION_COLUMNS = {
+    "outstanding_roles": {
+        "candidate_gender": "VARCHAR(32) NOT NULL DEFAULT ''",
+        "reason_why_next_steps": "TEXT NOT NULL DEFAULT ''",
+    },
+    "filled_roles": {
+        "hired_gender": "VARCHAR(32) NOT NULL DEFAULT ''",
+        "departure_event_date": "VARCHAR(64) NOT NULL DEFAULT ''",
+        "reason_why_next_steps": "TEXT NOT NULL DEFAULT ''",
+    },
+}
+
 
 def _database_url() -> str:
     configured = ""
@@ -96,6 +108,19 @@ def _schema_needs_reset(sync_connection) -> bool:
     return False
 
 
+def _apply_schema_evolution(sync_connection) -> None:
+    inspector = inspect(sync_connection)
+    existing_tables = set(inspector.get_table_names())
+    for table_name, columns in SCHEMA_EVOLUTION_COLUMNS.items():
+        if table_name not in existing_tables:
+            continue
+        existing_columns = {column["name"] for column in inspector.get_columns(table_name)}
+        for column_name, ddl in columns.items():
+            if column_name in existing_columns:
+                continue
+            sync_connection.exec_driver_sql(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {ddl}")
+
+
 async def init_db() -> None:
     engine = get_engine()
     url = _database_url()
@@ -104,6 +129,7 @@ async def init_db() -> None:
         if needs_reset:
             await connection.run_sync(Base.metadata.drop_all)
         await connection.run_sync(Base.metadata.create_all)
+        await connection.run_sync(_apply_schema_evolution)
     async with get_session_factory()() as session:
         await seed_database(session)
 

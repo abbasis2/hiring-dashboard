@@ -24,6 +24,7 @@ const schema = z.object({
   location: z.string().default(""),
   backfill_reason: z.string().default(""),
   departure_type: z.string().default("Backfill"),
+  candidate_gender: z.string().default(""),
   start_date: z.string().default(""),
   status: z.string().default("Sourcing"),
   internal_shortlisted: nullableNumber,
@@ -31,6 +32,7 @@ const schema = z.object({
   interviews_pending: nullableNumber,
   date_filled: z.string().default(""),
   active_inactive: z.string().default("Active"),
+  reason_why_next_steps: z.string().default(""),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -53,6 +55,7 @@ export default function AddJob() {
       location: options.location[0] ?? "",
       backfill_reason: "",
       departure_type: options.departure_type[0] ?? "Backfill",
+      candidate_gender: options.gender[0] ?? "",
       start_date: "",
       status: options.outstanding_status[0] ?? "Sourcing",
       internal_shortlisted: null,
@@ -60,6 +63,7 @@ export default function AddJob() {
       interviews_pending: null,
       date_filled: "",
       active_inactive: options.active_inactive[0] ?? "Active",
+      reason_why_next_steps: "",
     }
   });
 
@@ -140,9 +144,24 @@ export default function AddJob() {
               ))}
             </select>
           </label>
+          <label className="space-y-2">
+            <span className="text-sm text-[var(--text-secondary)]">Candidate Gender</span>
+            <select className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3" {...register("candidate_gender")}>
+              <option value="">Not specified</option>
+              {options.gender.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="space-y-2 md:col-span-2">
             <span className="text-sm text-[var(--text-secondary)]">Backfill Reason</span>
             <textarea className="min-h-24 w-full rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3" {...register("backfill_reason")} />
+          </label>
+          <label className="space-y-2 md:col-span-2">
+            <span className="text-sm text-[var(--text-secondary)]">Reason / Why / Next Steps</span>
+            <textarea className="min-h-24 w-full rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3" {...register("reason_why_next_steps")} />
           </label>
           <label className="space-y-2">
             <span className="text-sm text-[var(--text-secondary)]">Start Date</span>

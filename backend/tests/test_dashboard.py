@@ -18,3 +18,15 @@ async def test_dashboard_stats_include_breakdowns(client):
     assert len(body['by_team']) > 0
     assert len(body['departure_type_breakdown']) > 0
     assert len(body['location_breakdown']) > 0
+
+
+async def test_dashboard_stats_include_new_meta_gender_and_heatmaps(client):
+    response = await client.get('/api/dashboard/stats')
+    assert response.status_code == 200
+    body = response.json()['data']
+    assert 'plutus_meta' in body
+    assert 'gender_overview' in body
+    assert 'attrition_heatmap' in body
+    assert 'dropout_heatmap' in body
+    assert isinstance(body['gender_overview']['meta'], list)
+    assert isinstance(body['attrition_heatmap']['months'], list)

@@ -11,6 +11,9 @@ const ORDERED_FIELDS: MasterFieldKey[] = [
   "outstanding_status",
   "active_inactive",
   "filled_status",
+  "gender",
+  "dropout_stage",
+  "dropout_reason",
 ];
 
 function normalizeOptions(data?: Partial<MasterOptionsMap>): DropdownOptions {

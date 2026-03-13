@@ -35,6 +35,7 @@ class OutstandingRole(Base, TimestampMixin):
     location: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     backfill_reason: Mapped[str] = mapped_column(Text, default="", nullable=False)
     departure_type: Mapped[str] = mapped_column(String(64), default="", nullable=False, index=True)
+    candidate_gender: Mapped[str] = mapped_column(String(32), default="", nullable=False, index=True)
     start_date: Mapped[str] = mapped_column(String(64), default="", nullable=False)
     status: Mapped[str] = mapped_column(String(64), default="Sourcing", nullable=False, index=True)
     internal_shortlisted: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -42,6 +43,7 @@ class OutstandingRole(Base, TimestampMixin):
     interviews_pending: Mapped[int | None] = mapped_column(Integer, nullable=True)
     date_filled: Mapped[str] = mapped_column(String(64), default="", nullable=False)
     active_inactive: Mapped[str] = mapped_column(String(32), default="Active", nullable=False, index=True)
+    reason_why_next_steps: Mapped[str] = mapped_column(Text, default="", nullable=False)
 
 
 class FilledRole(Base, TimestampMixin):
@@ -55,9 +57,12 @@ class FilledRole(Base, TimestampMixin):
     backfill_reason: Mapped[str] = mapped_column(Text, default="", nullable=False)
     departure_type: Mapped[str] = mapped_column(String(64), default="", nullable=False, index=True)
     hired_name: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    hired_gender: Mapped[str] = mapped_column(String(32), default="", nullable=False, index=True)
+    departure_event_date: Mapped[str] = mapped_column(String(64), default="", nullable=False)
     start_date: Mapped[str] = mapped_column(String(64), default="", nullable=False)
     status: Mapped[str] = mapped_column(String(64), default="", nullable=False)
     notes: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    reason_why_next_steps: Mapped[str] = mapped_column(Text, default="", nullable=False)
 
 
 class Job(Base, TimestampMixin):
@@ -96,3 +101,19 @@ class MasterOption(Base, TimestampMixin):
     value: Mapped[str] = mapped_column(String(255), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
+
+
+class RecruitingDropout(Base, TimestampMixin):
+    __tablename__ = "recruiting_dropouts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    job_id: Mapped[str] = mapped_column(String(32), default="", nullable=False, index=True)
+    role_title: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    team: Mapped[str] = mapped_column(String(255), default="", nullable=False, index=True)
+    location: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    stage: Mapped[str] = mapped_column(String(64), default="", nullable=False, index=True)
+    dropout_reason: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    candidate_gender: Mapped[str] = mapped_column(String(32), default="", nullable=False, index=True)
+    dropout_date: Mapped[str] = mapped_column(String(64), default="", nullable=False, index=True)
+    reason_why_next_steps: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    status: Mapped[str] = mapped_column(String(64), default="Open", nullable=False, index=True)

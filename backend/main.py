@@ -22,6 +22,7 @@ from .routers.filled_roles import router as filled_roles_router
 from .routers.jobs import router as jobs_router
 from .routers.master_options import router as master_options_router
 from .routers.positions import router as positions_router
+from .routers.recruiting_dropouts import router as recruiting_dropouts_router
 from .routers.users import router as users_router
 from .security import validate_security_config
 
@@ -103,6 +104,7 @@ app.include_router(filled_roles_router)
 app.include_router(jobs_router)
 app.include_router(dashboard_router)
 app.include_router(master_options_router)
+app.include_router(recruiting_dropouts_router)
 app.include_router(auth_router)
 app.include_router(users_router)
 

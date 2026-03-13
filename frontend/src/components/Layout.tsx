@@ -11,6 +11,7 @@ import {
   TableProperties,
   UploadCloud,
   UserRoundCheck,
+  UserX2,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -21,6 +22,7 @@ const baseLinks = [
   { to: "/", label: "Dashboard", icon: ChartColumn },
   { to: "/outstanding-positions", label: "Outstanding Positions", icon: TableProperties },
   { to: "/filled-positions", label: "Filled Positions", icon: UserRoundCheck },
+  { to: "/recruiting-dropouts", label: "Recruiting Dropouts", icon: UserX2 },
   { to: "/add-position", label: "Add Position", icon: PlusCircle },
   { to: "/upload", label: "Import Excel", icon: UploadCloud },
 ];

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime
 import os
 import re
 from typing import Any, Iterable
@@ -10,7 +10,7 @@ from sqlalchemy import delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import FilledRole, Job, MasterOption, OutstandingRole, User
+from .models import FilledRole, Job, MasterOption, OutstandingRole, RecruitingDropout, User
 from .schemas import (
     FilledRoleCreate,
     FilledRoleUpdate,
@@ -18,6 +18,8 @@ from .schemas import (
     JobUpdate,
     OutstandingRoleCreate,
     OutstandingRoleUpdate,
+    RecruitingDropoutCreate,
+    RecruitingDropoutUpdate,
 )
 from .security import (
     create_access_token,
@@ -73,6 +75,26 @@ MASTER_OPTION_DEFAULTS: dict[str, list[str]] = {
         "Offer Accepted",
         "Started",
     ],
+    "gender": [
+        "Female",
+        "Male",
+        "Non-binary",
+        "Prefer not to say",
+    ],
+    "dropout_stage": [
+        "Screening",
+        "Technical Interview",
+        "Manager Interview",
+        "Final Interview",
+        "Offer",
+    ],
+    "dropout_reason": [
+        "Accepted another offer",
+        "Compensation mismatch",
+        "Role mismatch",
+        "Communication delay",
+        "Personal reasons",
+    ],
 }
 DEFAULT_SUPER_ADMIN_EMAIL = "admin@local.test"
 DEFAULT_SUPER_ADMIN_PASSWORD = "Admin@12345"
@@ -103,6 +125,70 @@ def as_percent(numerator: int, denominator: int) -> str:
     return f"{round((numerator / denominator) * 100):.0f}%"
 
 
+def normalize_gender(value: str) -> str:
+    clean = clean_text(value)
+    return clean if clean else "Not Specified"
+
+
+def parse_month(value: Any) -> str | None:
+    text = clean_text(value)
+    if not text:
+        return None
+    if re.fullmatch(r"\d{4}-\d{2}", text):
+        return text
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
+        return text[:7]
+
+    patterns = (
+        "%Y/%m/%d",
+        "%m/%d/%Y",
+        "%m/%d/%y",
+        "%d/%m/%Y",
+        "%d-%m-%Y",
+    )
+    for pattern in patterns:
+        try:
+            return datetime.strptime(text, pattern).strftime("%Y-%m")
+        except ValueError:
+            continue
+    return None
+
+
+def gender_breakdown(values: Iterable[str]) -> list[dict[str, Any]]:
+    normalized = [normalize_gender(value) for value in values]
+    total = len(normalized)
+    counts: dict[str, int] = defaultdict(int)
+    for value in normalized:
+        counts[value] += 1
+    rows = [
+        {
+            "label": label,
+            "count": count,
+            "percentage": as_percent(count, total),
+        }
+        for label, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    ]
+    return rows
+
+
+def build_heatmap(pairs: Iterable[tuple[str, str]]) -> dict[str, Any]:
+    normalized_pairs = [(clean_text(label) or "Unassigned", clean_text(month)) for label, month in pairs if clean_text(month)]
+    if not normalized_pairs:
+        return {"months": [], "rows": []}
+
+    months = sorted({month for _, month in normalized_pairs})
+    rows_map: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    for label, month in normalized_pairs:
+        rows_map[label][month] += 1
+
+    rows = []
+    for label, counts in rows_map.items():
+        values = [counts.get(month, 0) for month in months]
+        rows.append({"label": label, "values": values, "total": sum(values)})
+    rows.sort(key=lambda item: (-item["total"], item["label"]))
+    return {"months": months, "rows": rows}
+
+
 def normalize_outstanding_seed(record: dict[str, Any]) -> dict[str, Any]:
     return {
         "job_id": clean_text(record.get("Job ID")),
@@ -112,6 +198,7 @@ def normalize_outstanding_seed(record: dict[str, Any]) -> dict[str, Any]:
         "location": clean_text(record.get("Location")),
         "backfill_reason": clean_text(record.get("Backfill Reason")),
         "departure_type": clean_text(record.get("Departure Type")),
+        "candidate_gender": clean_text(record.get("Candidate Gender")),
         "start_date": clean_text(record.get("Start Date")),
         "status": clean_text(record.get("Status")) or "Sourcing",
         "internal_shortlisted": clean_int(record.get("Internal Shortlisted")),
@@ -119,6 +206,9 @@ def normalize_outstanding_seed(record: dict[str, Any]) -> dict[str, Any]:
         "interviews_pending": clean_int(record.get("Interviews Pending")),
         "date_filled": clean_text(record.get("Date filled")),
         "active_inactive": clean_text(record.get("Active/Inactive")) or "Active",
+        "reason_why_next_steps": clean_text(
+            record.get("Reason/Why/Next Steps") or record.get("Reason Why Next Steps")
+        ),
     }
 
 
@@ -131,9 +221,14 @@ def normalize_filled_seed(record: dict[str, Any]) -> dict[str, Any]:
         "backfill_reason": clean_text(record.get("Backfill Reason")),
         "departure_type": clean_text(record.get("Departure Type")),
         "hired_name": clean_text(record.get("Hired Name")),
+        "hired_gender": clean_text(record.get("Hired Gender")),
+        "departure_event_date": clean_text(record.get("Departure Event Date")),
         "start_date": clean_text(record.get("Start Date")),
         "status": clean_text(record.get("Status")),
         "notes": clean_text(record.get("Notes")),
+        "reason_why_next_steps": clean_text(
+            record.get("Reason/Why/Next Steps") or record.get("Reason Why Next Steps")
+        ),
     }
 
 
@@ -208,6 +303,7 @@ async def _ensure_master_options(session: AsyncSession) -> int:
     # Ensure existing data values are also available in dropdown masters.
     outstanding_rows = list(await session.scalars(select(OutstandingRole)))
     filled_rows = list(await session.scalars(select(FilledRole)))
+    dropout_rows = list(await session.scalars(select(RecruitingDropout)))
     sync_values: dict[str, list[str]] = {
         "team": [row.team for row in outstanding_rows] + [row.team for row in filled_rows],
         "location": [row.location for row in outstanding_rows] + [row.location for row in filled_rows],
@@ -215,6 +311,11 @@ async def _ensure_master_options(session: AsyncSession) -> int:
         "outstanding_status": [row.status for row in outstanding_rows],
         "active_inactive": [row.active_inactive for row in outstanding_rows],
         "filled_status": [row.status for row in filled_rows],
+        "gender": [row.candidate_gender for row in outstanding_rows]
+        + [row.hired_gender for row in filled_rows]
+        + [row.candidate_gender for row in dropout_rows],
+        "dropout_stage": [row.stage for row in dropout_rows],
+        "dropout_reason": [row.dropout_reason for row in dropout_rows],
     }
     for field_key, values in sync_values.items():
         base_sort = len(MASTER_OPTION_DEFAULTS.get(field_key, []))
@@ -383,6 +484,44 @@ async def delete_outstanding_role(session: AsyncSession, role: OutstandingRole) 
 
 async def delete_filled_role(session: AsyncSession, role: FilledRole) -> None:
     await session.delete(role)
+    await session.commit()
+
+
+async def list_recruiting_dropouts(session: AsyncSession, page: int = 1, size: int = 50) -> tuple[list[RecruitingDropout], int]:
+    query = select(RecruitingDropout).order_by(RecruitingDropout.created_at.desc(), RecruitingDropout.id.desc())
+    total = int(await session.scalar(select(func.count()).select_from(RecruitingDropout)) or 0)
+    items = await session.scalars(query.offset((page - 1) * size).limit(size))
+    return list(items), total
+
+
+async def get_recruiting_dropout(session: AsyncSession, dropout_id: int) -> RecruitingDropout | None:
+    return await session.get(RecruitingDropout, dropout_id)
+
+
+async def create_recruiting_dropout(session: AsyncSession, payload: RecruitingDropoutCreate) -> RecruitingDropout:
+    dropout = RecruitingDropout(**payload.model_dump())
+    session.add(dropout)
+    await session.commit()
+    await session.refresh(dropout)
+    await _ensure_master_options(session)
+    return dropout
+
+
+async def update_recruiting_dropout(
+    session: AsyncSession,
+    dropout: RecruitingDropout,
+    payload: RecruitingDropoutUpdate,
+) -> RecruitingDropout:
+    for field, value in payload.model_dump(exclude_none=True).items():
+        setattr(dropout, field, value)
+    await session.commit()
+    await session.refresh(dropout)
+    await _ensure_master_options(session)
+    return dropout
+
+
+async def delete_recruiting_dropout(session: AsyncSession, dropout: RecruitingDropout) -> None:
+    await session.delete(dropout)
     await session.commit()
 
 
@@ -593,8 +732,18 @@ async def create_master_option(session: AsyncSession, field_key: str, value: str
 async def dashboard_stats(session: AsyncSession) -> dict[str, Any]:
     outstanding_roles = list(await session.scalars(select(OutstandingRole).order_by(OutstandingRole.job_id)))
     filled_roles = list(await session.scalars(select(FilledRole).order_by(FilledRole.job_id)))
+    dropout_rows = list(await session.scalars(select(RecruitingDropout).order_by(RecruitingDropout.created_at.desc())))
 
     active_roles = [role for role in outstanding_roles if role.active_inactive == "Active"]
+    unique_job_ids = {
+        role.job_id
+        for role in [*outstanding_roles, *filled_roles]
+        if clean_text(role.job_id)
+    }
+    total_unique_roles = len(unique_job_ids) if unique_job_ids else len(outstanding_roles)
+    attrition_fills = sum(1 for role in filled_roles if role.departure_type == "Attrition")
+    termination_fills = sum(1 for role in filled_roles if role.departure_type == "Termination")
+
     summary = {
         "total_roles": len(outstanding_roles),
         "active_open": len(active_roles),
@@ -603,6 +752,23 @@ async def dashboard_stats(session: AsyncSession) -> dict[str, Any]:
         "avg_time_to_fill": "-",
         "pipeline_conversion": "-",
         "offer_acceptance_rate": "-",
+    }
+    plutus_meta = {
+        "total_unique_roles": total_unique_roles,
+        "active_outstanding": len(active_roles),
+        "filled_roles": len(filled_roles),
+        "attrition_fills": attrition_fills,
+        "termination_fills": termination_fills,
+        "dropout_events": len(dropout_rows),
+        "overall_fill_rate": as_percent(len(filled_roles), total_unique_roles),
+    }
+
+    gender_overview = {
+        "meta": gender_breakdown(
+            [role.candidate_gender for role in outstanding_roles] + [role.hired_gender for role in filled_roles]
+        ),
+        "pipeline": gender_breakdown([role.candidate_gender for role in active_roles]),
+        "results": gender_breakdown([role.hired_gender for role in filled_roles]),
     }
 
     team_names = sorted({role.team for role in outstanding_roles if role.team} | {role.team for role in filled_roles if role.team})
@@ -665,9 +831,33 @@ async def dashboard_stats(session: AsyncSession) -> dict[str, Any]:
             }
         )
 
+    filled_job_ids = {role.job_id for role in filled_roles if clean_text(role.job_id)}
+    attrition_points: list[tuple[str, str]] = []
+    for role in filled_roles:
+        if role.departure_type != "Attrition":
+            continue
+        month = parse_month(role.departure_event_date) or parse_month(role.start_date) or role.created_at.strftime("%Y-%m")
+        attrition_points.append((role.team, month))
+    for role in outstanding_roles:
+        if role.departure_type != "Attrition":
+            continue
+        if clean_text(role.job_id) and role.job_id in filled_job_ids:
+            continue
+        month = parse_month(role.date_filled) or parse_month(role.start_date) or role.created_at.strftime("%Y-%m")
+        attrition_points.append((role.team, month))
+
+    dropout_points: list[tuple[str, str]] = []
+    for row in dropout_rows:
+        month = parse_month(row.dropout_date) or row.created_at.strftime("%Y-%m")
+        dropout_points.append((row.stage, month))
+
     return {
         "generated_on": date.today().isoformat(),
         "summary": summary,
+        "plutus_meta": plutus_meta,
+        "gender_overview": gender_overview,
+        "attrition_heatmap": build_heatmap(attrition_points),
+        "dropout_heatmap": build_heatmap(dropout_points),
         "by_team": by_team,
         "departure_type_breakdown": departure_breakdown,
         "location_breakdown": location_breakdown,

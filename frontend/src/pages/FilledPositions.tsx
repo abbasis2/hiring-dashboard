@@ -48,7 +48,11 @@ export default function FilledPositions() {
 
   const filledRoles = useMemo(() => {
     const roles = filledQuery.data ?? [];
-    return roles.filter((role) => `${role.job_id} ${role.role_title} ${role.team} ${role.location} ${role.hired_name}`.toLowerCase().includes(search.toLowerCase()));
+    return roles.filter((role) =>
+      `${role.job_id} ${role.role_title} ${role.team} ${role.location} ${role.hired_name} ${role.hired_gender} ${role.reason_why_next_steps}`
+        .toLowerCase()
+        .includes(search.toLowerCase())
+    );
   }, [filledQuery.data, search]);
 
   return (

@@ -103,3 +103,63 @@ async def test_create_job_description_boundary_validation(client):
     )
     assert valid.status_code == 201
     assert invalid.status_code == 422
+
+
+async def test_create_position_candidate_gender_boundary_validation(client):
+    valid = await client.post(
+        "/api/positions",
+        json={
+            "job_id": "",
+            "role_title": "Gender Boundary Role",
+            "team": "Team 27",
+            "location": "CN/Lahore",
+            "departure_type": "Backfill",
+            "candidate_gender": "G" * 32,
+            "status": "Sourcing",
+            "active_inactive": "Active",
+        },
+    )
+    invalid = await client.post(
+        "/api/positions",
+        json={
+            "job_id": "",
+            "role_title": "Gender Overflow Role",
+            "team": "Team 27",
+            "location": "CN/Lahore",
+            "departure_type": "Backfill",
+            "candidate_gender": "G" * 33,
+            "status": "Sourcing",
+            "active_inactive": "Active",
+        },
+    )
+    assert valid.status_code == 201
+    assert invalid.status_code == 422
+
+
+async def test_update_filled_role_reason_why_next_steps_boundary_validation(client):
+    listing = await client.get("/api/filled-roles")
+    role_id = listing.json()["data"][0]["id"]
+
+    valid = await client.put(
+        f"/api/filled-roles/{role_id}",
+        json={"reason_why_next_steps": "N" * 5000},
+    )
+    invalid = await client.put(
+        f"/api/filled-roles/{role_id}",
+        json={"reason_why_next_steps": "N" * 5001},
+    )
+    assert valid.status_code == 200
+    assert invalid.status_code == 422
+
+
+async def test_recruiting_dropout_stage_boundary_validation(client):
+    valid = await client.post(
+        "/api/recruiting-dropouts",
+        json={"stage": "S" * 64},
+    )
+    invalid = await client.post(
+        "/api/recruiting-dropouts",
+        json={"stage": "S" * 65},
+    )
+    assert valid.status_code == 201
+    assert invalid.status_code == 422

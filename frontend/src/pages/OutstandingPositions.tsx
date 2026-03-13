@@ -48,7 +48,11 @@ export default function OutstandingPositions() {
 
   const outstandingRoles = useMemo(() => {
     const roles = outstandingQuery.data ?? [];
-    return roles.filter((role) => `${role.job_id} ${role.role_title} ${role.team} ${role.location}`.toLowerCase().includes(search.toLowerCase()));
+    return roles.filter((role) =>
+      `${role.job_id} ${role.role_title} ${role.team} ${role.location} ${role.candidate_gender} ${role.reason_why_next_steps}`
+        .toLowerCase()
+        .includes(search.toLowerCase())
+    );
   }, [outstandingQuery.data, search]);
 
   return (

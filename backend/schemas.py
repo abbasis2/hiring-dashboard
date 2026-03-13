@@ -26,6 +26,7 @@ class OutstandingRoleBase(BaseModel):
     location: str = Field(default="", max_length=255)
     backfill_reason: str = Field(default="", max_length=5000)
     departure_type: str = Field(default="", max_length=64)
+    candidate_gender: str = Field(default="", max_length=32)
     start_date: str = Field(default="", max_length=64)
     status: str = Field(default="Sourcing", max_length=64)
     internal_shortlisted: int | None = Field(default=None, ge=0)
@@ -33,6 +34,7 @@ class OutstandingRoleBase(BaseModel):
     interviews_pending: int | None = Field(default=None, ge=0)
     date_filled: str = Field(default="", max_length=64)
     active_inactive: str = Field(default="Active", max_length=32)
+    reason_why_next_steps: str = Field(default="", max_length=5000)
 
 
 class OutstandingRoleCreate(OutstandingRoleBase):
@@ -46,6 +48,7 @@ class OutstandingRoleUpdate(BaseModel):
     location: str | None = Field(default=None, max_length=255)
     backfill_reason: str | None = Field(default=None, max_length=5000)
     departure_type: str | None = Field(default=None, max_length=64)
+    candidate_gender: str | None = Field(default=None, max_length=32)
     start_date: str | None = Field(default=None, max_length=64)
     status: str | None = Field(default=None, max_length=64)
     internal_shortlisted: int | None = Field(default=None, ge=0)
@@ -53,6 +56,7 @@ class OutstandingRoleUpdate(BaseModel):
     interviews_pending: int | None = Field(default=None, ge=0)
     date_filled: str | None = Field(default=None, max_length=64)
     active_inactive: str | None = Field(default=None, max_length=32)
+    reason_why_next_steps: str | None = Field(default=None, max_length=5000)
 
 
 class OutstandingRoleRead(OutstandingRoleBase):
@@ -71,9 +75,12 @@ class FilledRoleBase(BaseModel):
     backfill_reason: str = Field(default="", max_length=5000)
     departure_type: str = Field(default="", max_length=64)
     hired_name: str = Field(default="", max_length=255)
+    hired_gender: str = Field(default="", max_length=32)
+    departure_event_date: str = Field(default="", max_length=64)
     start_date: str = Field(default="", max_length=64)
     status: str = Field(default="", max_length=64)
     notes: str = Field(default="", max_length=5000)
+    reason_why_next_steps: str = Field(default="", max_length=5000)
 
 
 class FilledRoleCreate(FilledRoleBase):
@@ -87,9 +94,12 @@ class FilledRoleUpdate(BaseModel):
     backfill_reason: str | None = Field(default=None, max_length=5000)
     departure_type: str | None = Field(default=None, max_length=64)
     hired_name: str | None = Field(default=None, max_length=255)
+    hired_gender: str | None = Field(default=None, max_length=32)
+    departure_event_date: str | None = Field(default=None, max_length=64)
     start_date: str | None = Field(default=None, max_length=64)
     status: str | None = Field(default=None, max_length=64)
     notes: str | None = Field(default=None, max_length=5000)
+    reason_why_next_steps: str | None = Field(default=None, max_length=5000)
 
 
 class FilledRoleRead(FilledRoleBase):
@@ -142,6 +152,16 @@ class DashboardSummary(BaseModel):
     offer_acceptance_rate: str
 
 
+class PlutusMetaPicture(BaseModel):
+    total_unique_roles: int
+    active_outstanding: int
+    filled_roles: int
+    attrition_fills: int
+    termination_fills: int
+    dropout_events: int
+    overall_fill_rate: str
+
+
 class TeamBreakdown(BaseModel):
     team: str
     active_outstanding: int
@@ -161,9 +181,36 @@ class BreakdownRow(BaseModel):
     fill_rate: str
 
 
+class GenderBreakdownRow(BaseModel):
+    label: str
+    count: int
+    percentage: str
+
+
+class GenderOverview(BaseModel):
+    meta: list[GenderBreakdownRow]
+    pipeline: list[GenderBreakdownRow]
+    results: list[GenderBreakdownRow]
+
+
+class HeatmapRow(BaseModel):
+    label: str
+    values: list[int]
+    total: int
+
+
+class HeatmapPayload(BaseModel):
+    months: list[str]
+    rows: list[HeatmapRow]
+
+
 class DashboardPayload(BaseModel):
     generated_on: str
     summary: DashboardSummary
+    plutus_meta: PlutusMetaPicture
+    gender_overview: GenderOverview
+    attrition_heatmap: HeatmapPayload
+    dropout_heatmap: HeatmapPayload
     by_team: list[TeamBreakdown]
     departure_type_breakdown: list[BreakdownRow]
     location_breakdown: list[BreakdownRow]
@@ -195,6 +242,44 @@ class MasterOptionRead(BaseModel):
 
 class MasterOptionCreate(BaseModel):
     value: str = Field(min_length=1, max_length=255)
+
+
+class RecruitingDropoutBase(BaseModel):
+    job_id: str = Field(default="", max_length=32)
+    role_title: str = Field(default="", max_length=255)
+    team: str = Field(default="", max_length=255)
+    location: str = Field(default="", max_length=255)
+    stage: str = Field(default="", max_length=64)
+    dropout_reason: str = Field(default="", max_length=5000)
+    candidate_gender: str = Field(default="", max_length=32)
+    dropout_date: str = Field(default="", max_length=64)
+    reason_why_next_steps: str = Field(default="", max_length=5000)
+    status: str = Field(default="Open", max_length=64)
+
+
+class RecruitingDropoutCreate(RecruitingDropoutBase):
+    pass
+
+
+class RecruitingDropoutUpdate(BaseModel):
+    job_id: str | None = Field(default=None, max_length=32)
+    role_title: str | None = Field(default=None, max_length=255)
+    team: str | None = Field(default=None, max_length=255)
+    location: str | None = Field(default=None, max_length=255)
+    stage: str | None = Field(default=None, max_length=64)
+    dropout_reason: str | None = Field(default=None, max_length=5000)
+    candidate_gender: str | None = Field(default=None, max_length=32)
+    dropout_date: str | None = Field(default=None, max_length=64)
+    reason_why_next_steps: str | None = Field(default=None, max_length=5000)
+    status: str | None = Field(default=None, max_length=64)
+
+
+class RecruitingDropoutRead(RecruitingDropoutBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    created_at: datetime
+    updated_at: datetime
 
 
 class UserRead(BaseModel):

@@ -33,6 +33,29 @@ export const ACTIVE_STATUS_OPTIONS: string[] = ["Active", "Inactive"];
 
 export const FILLED_STATUS_OPTIONS: string[] = ["Offer Accepted", "Started"];
 
+export const GENDER_OPTIONS: string[] = [
+  "Female",
+  "Male",
+  "Non-binary",
+  "Prefer not to say",
+];
+
+export const DROPOUT_STAGE_OPTIONS: string[] = [
+  "Screening",
+  "Technical Interview",
+  "Manager Interview",
+  "Final Interview",
+  "Offer",
+];
+
+export const DROPOUT_REASON_OPTIONS: string[] = [
+  "Accepted another offer",
+  "Compensation mismatch",
+  "Role mismatch",
+  "Communication delay",
+  "Personal reasons",
+];
+
 export const LOCATION_OPTIONS: string[] = [
   "CN/Lahore",
   "CN/Lahore - South America",
@@ -46,6 +69,9 @@ export const MASTER_FIELD_LABELS: Record<MasterFieldKey, string> = {
   outstanding_status: "Outstanding Status",
   active_inactive: "Active / Inactive",
   filled_status: "Filled Status",
+  gender: "Gender",
+  dropout_stage: "Dropout Stage",
+  dropout_reason: "Dropout Reason",
 };
 
 export const MASTER_FIELD_KEYS = Object.keys(MASTER_FIELD_LABELS) as MasterFieldKey[];
@@ -57,6 +83,9 @@ export const MASTER_FIELD_DESCRIPTIONS: Record<MasterFieldKey, string> = {
   outstanding_status: "Controls status values shown for outstanding positions.",
   active_inactive: "Controls active/inactive values used in outstanding roles.",
   filled_status: "Controls status values shown for filled positions.",
+  gender: "Controls gender values used in pipeline/results tracking.",
+  dropout_stage: "Controls recruiting dropout stage values.",
+  dropout_reason: "Controls recruiting dropout reason values.",
 };
 
 export const MASTER_FIELD_ROUTE_LABELS: Record<MasterFieldKey, string> = {
@@ -66,6 +95,9 @@ export const MASTER_FIELD_ROUTE_LABELS: Record<MasterFieldKey, string> = {
   outstanding_status: "Outstanding Statuses",
   active_inactive: "Active / Inactive",
   filled_status: "Filled Statuses",
+  gender: "Genders",
+  dropout_stage: "Dropout Stages",
+  dropout_reason: "Dropout Reasons",
 };
 
 export function isMasterFieldKey(value: string): value is MasterFieldKey {
@@ -79,4 +111,7 @@ export const DEFAULT_DROPDOWN_OPTIONS: DropdownOptions = {
   outstanding_status: OUTSTANDING_STATUS_OPTIONS,
   active_inactive: ACTIVE_STATUS_OPTIONS,
   filled_status: FILLED_STATUS_OPTIONS,
+  gender: GENDER_OPTIONS,
+  dropout_stage: DROPOUT_STAGE_OPTIONS,
+  dropout_reason: DROPOUT_REASON_OPTIONS,
 };

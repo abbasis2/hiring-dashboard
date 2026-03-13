@@ -67,7 +67,7 @@ export default function PositionTable({ roles, options, canDelete = false, onDel
       ) : null}
       <div className="card-shell overflow-hidden p-0">
         <div className="overflow-x-auto">
-          <table className="min-w-[1600px] divide-y divide-[var(--border)] text-sm">
+          <table className="min-w-[1900px] divide-y divide-[var(--border)] text-sm">
             <thead className="bg-[var(--bg-elevated)] text-left text-xs uppercase tracking-[0.16em] text-[var(--text-secondary)]">
               <tr>
                 <th className="px-3 py-3">Job ID</th>
@@ -77,6 +77,7 @@ export default function PositionTable({ roles, options, canDelete = false, onDel
                 <th className="px-3 py-3">Location</th>
                 <th className="px-3 py-3">Backfill Reason</th>
                 <th className="px-3 py-3">Departure Type</th>
+                <th className="px-3 py-3">Candidate Gender</th>
                 <th className="px-3 py-3">Start Date</th>
                 <th className="px-3 py-3">Status</th>
                 <th className="px-3 py-3">Internal Shortlisted</th>
@@ -84,6 +85,7 @@ export default function PositionTable({ roles, options, canDelete = false, onDel
                 <th className="px-3 py-3">Pending</th>
                 <th className="px-3 py-3">Date Filled</th>
                 <th className="px-3 py-3">Active/Inactive</th>
+                <th className="px-3 py-3">Reason/Why/Next Steps</th>
                 <th className="px-3 py-3">Save</th>
                 {canDelete ? <th className="px-3 py-3">Delete</th> : null}
               </tr>
@@ -98,6 +100,20 @@ export default function PositionTable({ roles, options, canDelete = false, onDel
                   <td className="px-3 py-3">{selectInput(role, "location", options.location, "w-44")}</td>
                   <td className="px-3 py-3"><textarea className="min-h-20 w-72 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, "backfill_reason", event.target.value)} value={role.backfill_reason} /></td>
                   <td className="px-3 py-3">{selectInput(role, "departure_type", options.departure_type, "w-36")}</td>
+                  <td className="px-3 py-3">
+                    <select
+                      className="w-36 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2"
+                      onChange={(event) => updateDraft(role, "candidate_gender", event.target.value)}
+                      value={role.candidate_gender ?? ""}
+                    >
+                      <option value="">Not specified</option>
+                      {options.gender.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
                   <td className="px-3 py-3"><input className="w-32 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, "start_date", event.target.value)} type="date" value={role.start_date ?? ""} /></td>
                   <td className="px-3 py-3">{selectInput(role, "status", options.outstanding_status, "w-32")}</td>
                   <td className="px-3 py-3"><input className="w-20 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, "internal_shortlisted", event.target.value)} type="number" value={role.internal_shortlisted ?? ""} /></td>
@@ -105,6 +121,7 @@ export default function PositionTable({ roles, options, canDelete = false, onDel
                   <td className="px-3 py-3"><input className="w-20 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, "interviews_pending", event.target.value)} type="number" value={role.interviews_pending ?? ""} /></td>
                   <td className="px-3 py-3"><input className="w-32 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, "date_filled", event.target.value)} type="date" value={/^\d{4}-\d{2}-\d{2}$/.test(role.date_filled ?? "") ? role.date_filled : ""} /></td>
                   <td className="px-3 py-3">{selectInput(role, "active_inactive", options.active_inactive, "w-28")}</td>
+                  <td className="px-3 py-3"><textarea className="min-h-20 w-72 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-2 py-2" onChange={(event) => updateDraft(role, "reason_why_next_steps", event.target.value)} value={role.reason_why_next_steps} /></td>
                   <td className="px-3 py-3">
                     <button
                       className="inline-flex items-center gap-2 rounded-lg bg-[var(--accent-primary)] px-3 py-2 font-semibold text-[var(--text-on-accent)] transition-all duration-200 hover:bg-[var(--accent-primary-strong)] disabled:opacity-70"
