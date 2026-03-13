@@ -7,9 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..crud import create_job, get_job, list_jobs, update_job
 from ..database import get_session
+from ..dependencies import get_current_user
 from ..schemas import Envelope, JobCreate, JobRead, JobUpdate, Meta
 
-router = APIRouter(prefix="/api/jobs", tags=["jobs"])
+router = APIRouter(prefix="/api/jobs", tags=["jobs"], dependencies=[Depends(get_current_user)])
 
 
 def envelope(data: Any, total: int, page: int) -> dict[str, Any]:

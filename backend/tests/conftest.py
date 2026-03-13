@@ -30,15 +30,30 @@ def _build_workbook_bytes() -> bytes:
 @pytest_asyncio.fixture(autouse=True)
 async def configure_test_db(tmp_path: Path):
     os.environ.pop("DATABASE_URL", None)
+    os.environ["SUPER_ADMIN_EMAIL"] = "admin@local.test"
+    os.environ["SUPER_ADMIN_PASSWORD"] = "Admin@12345"
+    os.environ["AUTH_RETURN_VERIFICATION_CODE"] = "true"
     db_module.DB_PATH = tmp_path / 'test.db'
     await db_module.init_db()
     yield
 
 
 @pytest_asyncio.fixture
-async def client():
+async def raw_client():
     async with AsyncClient(transport=ASGITransport(app=app), base_url='http://test') as api_client:
         yield api_client
+
+
+@pytest_asyncio.fixture
+async def client(raw_client: AsyncClient):
+    login_response = await raw_client.post(
+        "/api/auth/login",
+        json={"email": "admin@local.test", "password": "Admin@12345"},
+    )
+    assert login_response.status_code == 200
+    token = login_response.json()["data"]["access_token"]
+    raw_client.headers.update({"Authorization": f"Bearer {token}"})
+    return raw_client
 
 
 @pytest_asyncio.fixture

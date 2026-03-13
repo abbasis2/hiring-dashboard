@@ -30,15 +30,24 @@ Or start both together with `bash scripts/start.sh` after both toolchains are in
 | Method | Path | Purpose |
 | --- | --- | --- |
 | GET | `/api/health` | Health check |
+| POST | `/api/auth/signup` | Create user account |
+| POST | `/api/auth/verify-email` | Verify email using code |
+| POST | `/api/auth/login` | Authenticate and get bearer token |
+| GET | `/api/auth/me` | Current authenticated user |
+| GET | `/api/users` | List users (super admin only) |
+| PATCH | `/api/users/{id}/access` | Revoke/restore access (super admin only) |
+| DELETE | `/api/users/{id}` | Delete user (super admin only) |
 | GET | `/api/positions` | List positions with filters |
 | POST | `/api/positions` | Create a position |
 | PUT | `/api/positions/{id}` | Update a position |
 | DELETE | `/api/positions/{id}` | Delete a position |
+| GET | `/api/filled-roles` | List filled roles |
+| PUT | `/api/filled-roles/{id}` | Update a filled role |
+| DELETE | `/api/filled-roles/{id}` | Delete a filled role |
 | GET | `/api/jobs` | List jobs with pagination and search |
 | POST | `/api/jobs` | Create a job |
 | PUT | `/api/jobs/{id}` | Update a job |
 | GET | `/api/dashboard/stats` | Fetch dashboard KPIs |
-| GET | `/api/dashboard/funnel` | Fetch funnel data |
 | POST | `/api/upload-excel` | Import positions from Excel |
 
 ## Tests
@@ -55,6 +64,12 @@ Backend:
 - `DATABASE_URL`: optional for local development, required for Vercel. Use a hosted Postgres URL.
 - `FRONTEND_URL`: optional single frontend origin to allow through CORS.
 - `ALLOWED_ORIGINS`: optional comma-separated CORS allowlist. Overrides `FRONTEND_URL`.
+- `ALLOWED_ORIGIN_REGEX`: optional regex CORS allow rule (for Vercel previews, for example `https://.*\\.vercel\\.app`).
+- `AUTH_SECRET_KEY`: required for production. Long random secret for token signing.
+- `AUTH_TOKEN_TTL_MINUTES`: optional token expiry minutes.
+- `SUPER_ADMIN_EMAIL`: required for production. Bootstrapped super admin email.
+- `SUPER_ADMIN_PASSWORD`: required for production. Bootstrapped super admin password.
+- `AUTH_RETURN_VERIFICATION_CODE`: temporary no-SMTP mode. If `true`, signup returns verification code in API response.
 
 Frontend:
 
@@ -77,8 +92,11 @@ Backend project settings:
 - Import the same Git repository into Vercel.
 - Set the Root Directory to `backend`.
 - Add `DATABASE_URL` from your hosted Postgres database.
-- Add `FRONTEND_URL=https://<your-frontend>.vercel.app`
-- Or set `ALLOWED_ORIGINS=https://<your-frontend>.vercel.app`
+- Add `AUTH_SECRET_KEY` (strong random value).
+- Add `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD`.
+- Add `FRONTEND_URL=https://<your-frontend>.vercel.app` and optionally:
+  - `ALLOWED_ORIGIN_REGEX=https://.*\\.vercel\\.app` (for preview links)
+- If no email provider is configured yet, set `AUTH_RETURN_VERIFICATION_CODE=true` so signup/verify works.
 
 Backend entrypoint:
 
@@ -101,10 +119,13 @@ Deploy order:
 1. Create the Postgres database.
 2. Deploy the backend and confirm `https://<backend>.vercel.app/api/health` works.
 3. Deploy the frontend with `VITE_API_BASE_URL` pointed at the backend URL.
-4. Open the frontend URL and verify dashboard, edit, add-position, and import flows.
+4. Login using the configured super admin account.
+5. Verify dashboard, edit, add-position, import, and user-access-management flows.
 
 ## Notes
 
 - Seed data is inserted only when the tables are empty.
+- For local development, a default super admin is auto-created:
+  - `admin@local.test` / `Admin@12345`
 - Local development still uses `backend/recruitment_dashboard.db` automatically if `DATABASE_URL` is not set.
 - Vercel deployment should use Postgres because SQLite is not reliable on Vercel serverless infrastructure.

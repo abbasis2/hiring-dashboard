@@ -128,3 +128,27 @@ export type MasterOption = {
 export type MasterOptionsMap = Record<MasterFieldKey, MasterOption[]>;
 
 export type DropdownOptions = Record<MasterFieldKey, string[]>;
+
+export type UserRole = "super_admin" | "user";
+
+export type AuthUser = {
+  id: number;
+  email: string;
+  role: UserRole;
+  email_verified: boolean;
+  is_active: boolean;
+  created_at: string;
+  last_login_at: string | null;
+};
+
+export type AuthLoginPayload = {
+  access_token: string;
+  token_type: "bearer";
+  user: AuthUser;
+};
+
+export type AuthSignupPayload = {
+  message: string;
+  email: string;
+  verification_code: string | null;
+};

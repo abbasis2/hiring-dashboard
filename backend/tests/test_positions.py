@@ -120,3 +120,15 @@ async def test_latest_created_position_is_listed_first(client):
     listing = await client.get('/api/positions')
     assert listing.status_code == 200
     assert listing.json()['data'][0]['id'] == created_id
+
+
+async def test_super_admin_can_delete_position(client):
+    listing = await client.get("/api/positions")
+    role_id = listing.json()["data"][0]["id"]
+
+    delete_response = await client.delete(f"/api/positions/{role_id}")
+    assert delete_response.status_code == 200
+
+    after = await client.get("/api/positions")
+    ids = [item["id"] for item in after.json()["data"]]
+    assert role_id not in ids

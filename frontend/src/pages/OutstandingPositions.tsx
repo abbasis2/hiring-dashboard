@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { useMasterOptions } from "../api/masterOptions";
 import client from "../api/client";
+import { useAuth } from "../auth/useAuth";
 import PositionTable from "../components/PositionTable";
 import type { ApiResponse, OutstandingRole } from "../types";
 
@@ -13,6 +14,7 @@ async function fetchOutstandingRoles() {
 }
 
 export default function OutstandingPositions() {
+  const auth = useAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const optionsQuery = useMasterOptions();
@@ -32,6 +34,16 @@ export default function OutstandingPositions() {
       await queryClient.invalidateQueries({ queryKey: ["outstanding-roles"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
     }
+  });
+
+  const deleteOutstanding = useMutation({
+    mutationFn: async (roleId: number) => {
+      await client.delete(`/api/positions/${roleId}`);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["outstanding-roles"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    },
   });
 
   const outstandingRoles = useMemo(() => {
@@ -60,8 +72,10 @@ export default function OutstandingPositions() {
         <div className="card-shell h-64 animate-pulse" />
       ) : (
         <PositionTable
+          canDelete={auth.isSuperAdmin}
           options={optionsQuery.data}
           roles={outstandingRoles}
+          onDelete={async (roleId) => deleteOutstanding.mutateAsync(roleId)}
           onSave={async (roleId, values) => updateOutstanding.mutateAsync({ roleId, values })}
         />
       )}

@@ -7,9 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..crud import dashboard_stats
 from ..database import get_session
+from ..dependencies import get_current_user
 from ..schemas import DashboardPayload, Envelope, Meta
 
-router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
+router = APIRouter(prefix="/api/dashboard", tags=["dashboard"], dependencies=[Depends(get_current_user)])
 
 
 def envelope(data: Any) -> dict[str, Any]:

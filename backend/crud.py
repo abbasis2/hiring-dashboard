@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import date
+import os
 import re
 from typing import Any, Iterable
 
@@ -9,7 +10,7 @@ from sqlalchemy import delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import FilledRole, Job, MasterOption, OutstandingRole
+from .models import FilledRole, Job, MasterOption, OutstandingRole, User
 from .schemas import (
     FilledRoleCreate,
     FilledRoleUpdate,
@@ -17,6 +18,14 @@ from .schemas import (
     JobUpdate,
     OutstandingRoleCreate,
     OutstandingRoleUpdate,
+)
+from .security import (
+    create_access_token,
+    generate_verification_code,
+    hash_password,
+    utc_now_naive,
+    verification_expiry,
+    verify_password,
 )
 from .seed_data import FILLED_ROLES, OUTSTANDING_ROLES
 
@@ -67,12 +76,18 @@ MASTER_OPTION_DEFAULTS: dict[str, list[str]] = {
         "Started",
     ],
 }
+DEFAULT_SUPER_ADMIN_EMAIL = "admin@local.test"
+DEFAULT_SUPER_ADMIN_PASSWORD = "Admin@12345"
 
 
 def clean_text(value: Any) -> str:
     if value is None:
         return ""
     return str(value).strip()
+
+
+def normalize_email(value: str) -> str:
+    return clean_text(value).lower()
 
 
 def clean_int(value: Any) -> int | None:
@@ -213,6 +228,54 @@ async def _ensure_master_options(session: AsyncSession) -> int:
     return inserted
 
 
+async def _ensure_super_admin(session: AsyncSession) -> None:
+    configured_email = normalize_email(os.getenv("SUPER_ADMIN_EMAIL", ""))
+    configured_password = os.getenv("SUPER_ADMIN_PASSWORD", "").strip()
+    is_production = os.getenv("VERCEL", "").strip() == "1" or os.getenv("APP_ENV", "").strip().lower() in {"production", "prod"}
+
+    if configured_email and configured_password:
+        email = configured_email
+        password = configured_password
+    elif is_production:
+        # Never create a predictable default super admin in production.
+        return
+    else:
+        email = DEFAULT_SUPER_ADMIN_EMAIL
+        password = DEFAULT_SUPER_ADMIN_PASSWORD
+
+    if not email or not password:
+        return
+
+    existing = await session.scalar(select(User).where(User.email == email))
+    if existing is None:
+        session.add(
+            User(
+                email=email,
+                password_hash=hash_password(password),
+                role="super_admin",
+                email_verified=True,
+                is_active=True,
+                verification_code=None,
+                verification_expires_at=None,
+            )
+        )
+        await session.commit()
+        return
+
+    changed = False
+    if existing.role != "super_admin":
+        existing.role = "super_admin"
+        changed = True
+    if not existing.email_verified:
+        existing.email_verified = True
+        changed = True
+    if not existing.is_active:
+        existing.is_active = True
+        changed = True
+    if changed:
+        await session.commit()
+
+
 async def seed_database(session: AsyncSession) -> None:
     outstanding_count = await session.scalar(select(func.count()).select_from(OutstandingRole))
     filled_count = await session.scalar(select(func.count()).select_from(FilledRole))
@@ -227,6 +290,7 @@ async def seed_database(session: AsyncSession) -> None:
     await session.commit()
     await _ensure_outstanding_job_ids(session)
     await _ensure_master_options(session)
+    await _ensure_super_admin(session)
 
 
 async def list_outstanding_roles(
@@ -312,6 +376,115 @@ async def update_filled_role(session: AsyncSession, role: FilledRole, payload: F
     await session.commit()
     await session.refresh(role)
     return role
+
+
+async def delete_outstanding_role(session: AsyncSession, role: OutstandingRole) -> None:
+    await session.delete(role)
+    await session.commit()
+
+
+async def delete_filled_role(session: AsyncSession, role: FilledRole) -> None:
+    await session.delete(role)
+    await session.commit()
+
+
+async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
+    normalized = normalize_email(email)
+    if not normalized:
+        return None
+    return await session.scalar(select(User).where(User.email == normalized))
+
+
+async def get_user_by_id(session: AsyncSession, user_id: int) -> User | None:
+    return await session.get(User, user_id)
+
+
+async def signup_user(session: AsyncSession, *, email: str, password: str) -> tuple[User, str]:
+    normalized = normalize_email(email)
+    if not normalized:
+        raise ValueError("Email is required")
+    if len(password) < 8:
+        raise ValueError("Password must be at least 8 characters")
+
+    existing = await session.scalar(select(User).where(User.email == normalized))
+    if existing is not None:
+        raise ValueError("Email already exists")
+
+    code = generate_verification_code()
+    user = User(
+        email=normalized,
+        password_hash=hash_password(password),
+        role="user",
+        email_verified=False,
+        is_active=True,
+        verification_code=code,
+        verification_expires_at=verification_expiry(),
+    )
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    return user, code
+
+
+async def verify_user_email(session: AsyncSession, *, email: str, code: str) -> User:
+    normalized = normalize_email(email)
+    user = await session.scalar(select(User).where(User.email == normalized))
+    if user is None:
+        raise ValueError("User not found")
+    if not user.is_active:
+        raise ValueError("User access is revoked")
+    if user.email_verified:
+        return user
+
+    now = utc_now_naive()
+    if not user.verification_code or user.verification_code != code.strip():
+        raise ValueError("Invalid verification code")
+    if user.verification_expires_at is None or user.verification_expires_at < now:
+        raise ValueError("Verification code expired")
+
+    user.email_verified = True
+    user.verification_code = None
+    user.verification_expires_at = None
+    await session.commit()
+    await session.refresh(user)
+    return user
+
+
+async def authenticate_user(session: AsyncSession, *, email: str, password: str) -> User:
+    normalized = normalize_email(email)
+    user = await session.scalar(select(User).where(User.email == normalized))
+    if user is None or not verify_password(password, user.password_hash):
+        raise ValueError("Invalid email or password")
+    if not user.is_active:
+        raise PermissionError("User access is revoked")
+    if not user.email_verified:
+        raise PermissionError("Email is not verified")
+
+    user.last_login_at = utc_now_naive()
+    await session.commit()
+    await session.refresh(user)
+    return user
+
+
+def issue_access_token_for_user(user: User) -> str:
+    return create_access_token(user_id=user.id, email=user.email, role=user.role)
+
+
+async def list_users(session: AsyncSession) -> list[User]:
+    users = await session.scalars(select(User).order_by(User.created_at.desc(), User.id.desc()))
+    return list(users)
+
+
+async def set_user_access(session: AsyncSession, *, user: User, is_active: bool) -> User:
+    user.is_active = bool(is_active)
+    await session.commit()
+    await session.refresh(user)
+    return user
+
+
+async def delete_user(session: AsyncSession, *, user: User) -> None:
+    await session.delete(user)
+    await session.commit()
 
 
 async def replace_roles_from_workbook(

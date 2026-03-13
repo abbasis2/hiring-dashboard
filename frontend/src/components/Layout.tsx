@@ -1,20 +1,23 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 import type { PropsWithChildren } from "react";
 import {
   BriefcaseBusiness,
   ChartColumn,
   Database,
+  LogOut,
   Menu,
   PlusCircle,
+  ShieldCheck,
   TableProperties,
   UploadCloud,
   UserRoundCheck,
 } from "lucide-react";
 import { useState } from "react";
 
+import { useAuth } from "../auth/useAuth";
 import { MASTER_FIELD_KEYS, MASTER_FIELD_ROUTE_LABELS } from "../constants";
 
-const coreLinks = [
+const baseLinks = [
   { to: "/", label: "Dashboard", icon: ChartColumn },
   { to: "/outstanding-positions", label: "Outstanding Positions", icon: TableProperties },
   { to: "/filled-positions", label: "Filled Positions", icon: UserRoundCheck },
@@ -24,6 +27,11 @@ const coreLinks = [
 
 export default function Layout({ children }: PropsWithChildren) {
   const [collapsed, setCollapsed] = useState(false);
+  const auth = useAuth();
+  const content = children ?? <Outlet />;
+  const coreLinks = auth.isSuperAdmin
+    ? [...baseLinks, { to: "/users", label: "Users", icon: ShieldCheck }]
+    : baseLinks;
 
   return (
     <div className="flex min-h-screen bg-transparent">
@@ -108,8 +116,19 @@ export default function Layout({ children }: PropsWithChildren) {
               : null}
           </div>
         </nav>
+        <div className="mt-6 rounded-xl border border-[var(--sidebar-border)] bg-[var(--bg-sidebar-soft)] p-3">
+          {!collapsed ? <p className="truncate text-xs text-[var(--text-on-dark-muted)]">{auth.user?.email}</p> : null}
+          <button
+            className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--sidebar-border)] bg-[rgba(255,255,255,0.02)] px-3 py-2 text-xs font-semibold text-[var(--text-on-dark)] transition-all duration-200 hover:border-[var(--accent-primary)]"
+            onClick={() => auth.logout()}
+            type="button"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            {!collapsed ? "Logout" : null}
+          </button>
+        </div>
       </aside>
-      <main className="flex-1 px-5 py-6 lg:px-8">{children}</main>
+      <main className="flex-1 px-5 py-6 lg:px-8">{content}</main>
     </div>
   );
 }

@@ -73,6 +73,20 @@ class Job(Base, TimestampMixin):
     requirements: Mapped[str] = mapped_column(Text, default="", nullable=False)
 
 
+class User(Base, TimestampMixin):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    password_hash: Mapped[str] = mapped_column(String(512), nullable=False)
+    role: Mapped[str] = mapped_column(String(32), default="user", nullable=False, index=True)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
+    verification_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    verification_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 class MasterOption(Base, TimestampMixin):
     __tablename__ = "master_options"
     __table_args__ = (UniqueConstraint("field_key", "value", name="uq_master_options_field_value"),)

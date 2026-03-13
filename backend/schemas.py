@@ -195,3 +195,47 @@ class MasterOptionRead(BaseModel):
 
 class MasterOptionCreate(BaseModel):
     value: str = Field(min_length=1, max_length=255)
+
+
+class UserRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    email: str
+    role: str
+    email_verified: bool
+    is_active: bool
+    created_at: datetime
+    last_login_at: datetime | None
+
+
+class AuthSignupRequest(BaseModel):
+    email: str = Field(min_length=5, max_length=255)
+    password: str = Field(min_length=8, max_length=256)
+    confirm_email: str = Field(min_length=5, max_length=255)
+
+
+class AuthSignupPayload(BaseModel):
+    message: str
+    email: str
+    verification_code: str | None = None
+
+
+class AuthVerifyEmailRequest(BaseModel):
+    email: str = Field(min_length=5, max_length=255)
+    code: str = Field(min_length=6, max_length=16)
+
+
+class AuthLoginRequest(BaseModel):
+    email: str = Field(min_length=5, max_length=255)
+    password: str = Field(min_length=8, max_length=256)
+
+
+class AuthLoginPayload(BaseModel):
+    access_token: str
+    token_type: str
+    user: UserRead
+
+
+class UserAccessUpdate(BaseModel):
+    is_active: bool

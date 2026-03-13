@@ -7,9 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..crud import create_master_option, is_supported_master_field, list_master_options
 from ..database import get_session
+from ..dependencies import get_current_user
 from ..schemas import Envelope, MasterOptionCreate, MasterOptionRead, Meta
 
-router = APIRouter(prefix="/api/master-options", tags=["master-options"])
+router = APIRouter(prefix="/api/master-options", tags=["master-options"], dependencies=[Depends(get_current_user)])
 
 
 def envelope(data: Any, total: int, page: int = 1) -> dict[str, Any]:

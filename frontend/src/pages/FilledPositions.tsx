@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { useMasterOptions } from "../api/masterOptions";
 import client from "../api/client";
+import { useAuth } from "../auth/useAuth";
 import FilledRolesTable from "../components/FilledRolesTable";
 import type { ApiResponse, FilledRole } from "../types";
 
@@ -13,6 +14,7 @@ async function fetchFilledRoles() {
 }
 
 export default function FilledPositions() {
+  const auth = useAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const optionsQuery = useMasterOptions();
@@ -32,6 +34,16 @@ export default function FilledPositions() {
       await queryClient.invalidateQueries({ queryKey: ["filled-roles"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
     }
+  });
+
+  const deleteFilled = useMutation({
+    mutationFn: async (roleId: number) => {
+      await client.delete(`/api/filled-roles/${roleId}`);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["filled-roles"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    },
   });
 
   const filledRoles = useMemo(() => {
@@ -60,8 +72,10 @@ export default function FilledPositions() {
         <div className="card-shell h-64 animate-pulse" />
       ) : (
         <FilledRolesTable
+          canDelete={auth.isSuperAdmin}
           options={optionsQuery.data}
           roles={filledRoles}
+          onDelete={async (roleId) => deleteFilled.mutateAsync(roleId)}
           onSave={async (roleId, values) => updateFilled.mutateAsync({ roleId, values })}
         />
       )}

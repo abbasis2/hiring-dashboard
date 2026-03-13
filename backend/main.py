@@ -6,19 +6,24 @@ import time
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .crud import replace_roles_from_workbook
 from .database import get_session_factory, init_db
+from .dependencies import get_current_user
 from .excel_parser import parse_excel_workbook
+from .models import User
+from .routers.auth import router as auth_router
 from .routers.dashboard import router as dashboard_router
 from .routers.filled_roles import router as filled_roles_router
 from .routers.jobs import router as jobs_router
 from .routers.master_options import router as master_options_router
 from .routers.positions import router as positions_router
+from .routers.users import router as users_router
+from .security import validate_security_config
 
 DEFAULT_ORIGINS = [
     "http://localhost:5173",
@@ -48,6 +53,7 @@ def allowed_origin_regex() -> str | None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    validate_security_config()
     await init_db()
     yield
 
@@ -97,6 +103,8 @@ app.include_router(filled_roles_router)
 app.include_router(jobs_router)
 app.include_router(dashboard_router)
 app.include_router(master_options_router)
+app.include_router(auth_router)
+app.include_router(users_router)
 
 
 @app.get("/api/health")
@@ -105,7 +113,7 @@ async def health() -> dict[str, object]:
 
 
 @app.post("/api/upload-excel", status_code=201)
-async def upload_excel(file: UploadFile = File(...)) -> dict[str, object]:
+async def upload_excel(file: UploadFile = File(...), _: User = Depends(get_current_user)) -> dict[str, object]:
     if not file.filename:
         raise HTTPException(status_code=400, detail="Missing file name")
     try:

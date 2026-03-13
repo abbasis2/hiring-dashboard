@@ -5,11 +5,19 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..crud import create_outstanding_role, get_outstanding_role, list_outstanding_roles, update_outstanding_role
+from ..crud import (
+    create_outstanding_role,
+    delete_outstanding_role,
+    get_outstanding_role,
+    list_outstanding_roles,
+    update_outstanding_role,
+)
 from ..database import get_session
+from ..dependencies import get_current_user, require_super_admin
+from ..models import User
 from ..schemas import Envelope, Meta, OutstandingRoleCreate, OutstandingRoleRead, OutstandingRoleUpdate
 
-router = APIRouter(prefix="/api/positions", tags=["outstanding-roles"])
+router = APIRouter(prefix="/api/positions", tags=["outstanding-roles"], dependencies=[Depends(get_current_user)])
 
 
 def envelope(data: Any, total: int, page: int) -> dict[str, Any]:
@@ -49,3 +57,16 @@ async def edit_position(
         raise HTTPException(status_code=404, detail="Outstanding role not found")
     updated = await update_outstanding_role(session, role, payload)
     return envelope(OutstandingRoleRead.model_validate(updated).model_dump(mode="json"), 1, 1)
+
+
+@router.delete("/{role_id}")
+async def remove_position(
+    role_id: int,
+    _admin: User = Depends(require_super_admin),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, Any]:
+    role = await get_outstanding_role(session, role_id)
+    if role is None:
+        raise HTTPException(status_code=404, detail="Outstanding role not found")
+    await delete_outstanding_role(session, role)
+    return envelope({"deleted": True, "role_id": role_id}, 1, 1)

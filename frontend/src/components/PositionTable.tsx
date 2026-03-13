@@ -1,5 +1,5 @@
 import { AxiosError } from "axios";
-import { Save } from "lucide-react";
+import { Save, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { DropdownOptions, OutstandingRole } from "../types";
@@ -7,12 +7,15 @@ import type { DropdownOptions, OutstandingRole } from "../types";
 type Props = {
   roles: OutstandingRole[];
   options: DropdownOptions;
+  canDelete?: boolean;
+  onDelete?: (roleId: number) => Promise<void>;
   onSave: (roleId: number, values: Partial<OutstandingRole>) => Promise<void>;
 };
 
-export default function PositionTable({ roles, options, onSave }: Props) {
+export default function PositionTable({ roles, options, canDelete = false, onDelete, onSave }: Props) {
   const [drafts, setDrafts] = useState<Record<number, OutstandingRole>>({});
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [error, setError] = useState<string>("");
 
   const rows = useMemo(() => roles.map((role) => drafts[role.id] ?? role), [drafts, roles]);
@@ -82,6 +85,7 @@ export default function PositionTable({ roles, options, onSave }: Props) {
                 <th className="px-3 py-3">Date Filled</th>
                 <th className="px-3 py-3">Active/Inactive</th>
                 <th className="px-3 py-3">Save</th>
+                {canDelete ? <th className="px-3 py-3">Delete</th> : null}
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border)]">
@@ -128,6 +132,36 @@ export default function PositionTable({ roles, options, onSave }: Props) {
                       {savingId === role.id ? "Saving" : "Save"}
                     </button>
                   </td>
+                  {canDelete ? (
+                    <td className="px-3 py-3">
+                      <button
+                        className="inline-flex items-center gap-2 rounded-lg border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 font-semibold text-[var(--danger-text)] transition-all duration-200 hover:opacity-90 disabled:opacity-60"
+                        disabled={!onDelete || deletingId === role.id}
+                        onClick={async () => {
+                          if (!onDelete) {
+                            return;
+                          }
+                          if (!window.confirm(`Delete record ${role.job_id}? This action cannot be undone.`)) {
+                            return;
+                          }
+                          setError("");
+                          setDeletingId(role.id);
+                          try {
+                            await onDelete(role.id);
+                          } catch (err) {
+                            const detail = err instanceof AxiosError ? err.response?.data?.detail ?? err.message : "Delete failed";
+                            setError(detail);
+                          } finally {
+                            setDeletingId(null);
+                          }
+                        }}
+                        type="button"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {deletingId === role.id ? "Deleting" : "Delete"}
+                      </button>
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>
