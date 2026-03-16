@@ -15,7 +15,7 @@ async def test_list_positions_returns_workbook_rows(client):
     response = await client.get('/api/positions')
     assert response.status_code == 200
     body = response.json()
-    assert body['meta']['total'] == 15
+    assert body['meta']['total'] == 9
     assert body['data'][0]['job_id'].startswith('JOB-')
 
 
@@ -23,6 +23,13 @@ async def test_filter_active_positions(client):
     response = await client.get('/api/positions?active_only=true')
     assert response.status_code == 200
     assert all(item['active_inactive'] == 'Active' for item in response.json()['data'])
+
+
+async def test_next_job_id_endpoint_returns_legacy_format(client):
+    response = await client.get('/api/positions/next-job-id')
+    assert response.status_code == 200
+    job_id = response.json()['data']['job_id']
+    assert JOB_ID_PATTERN.fullmatch(job_id) is not None
 
 
 async def test_update_position_persists_excel_fields(client):
@@ -39,9 +46,9 @@ async def test_update_position_persists_excel_fields(client):
 
 
 async def test_create_position_without_job_id_auto_generates_and_list_still_loads(client):
-    existing_response = await client.get('/api/positions')
-    existing_ids = [item['job_id'] for item in existing_response.json()['data']]
-    max_before = max(_suffix(job_id) for job_id in existing_ids)
+    next_id_response = await client.get('/api/positions/next-job-id')
+    assert next_id_response.status_code == 200
+    expected_next_id = next_id_response.json()['data']['job_id']
 
     create_response = await client.post(
         '/api/positions',
@@ -59,7 +66,7 @@ async def test_create_position_without_job_id_auto_generates_and_list_still_load
     assert create_response.status_code == 201
     created = create_response.json()['data']
     assert JOB_ID_PATTERN.fullmatch(created['job_id']) is not None
-    assert created['job_id'] == f'JOB-{max_before + 1:03d}'
+    assert created['job_id'] == expected_next_id
 
     list_response = await client.get('/api/positions')
     assert list_response.status_code == 200
@@ -68,6 +75,10 @@ async def test_create_position_without_job_id_auto_generates_and_list_still_load
 
 
 async def test_auto_generated_job_ids_are_unique_and_increment(client):
+    next_id_response = await client.get('/api/positions/next-job-id')
+    assert next_id_response.status_code == 200
+    first_expected = _suffix(next_id_response.json()['data']['job_id'])
+
     first = await client.post(
         '/api/positions',
         json={
@@ -98,6 +109,7 @@ async def test_auto_generated_job_ids_are_unique_and_increment(client):
     first_id = first.json()['data']['job_id']
     second_id = second.json()['data']['job_id']
     assert first_id != second_id
+    assert _suffix(first_id) == first_expected
     assert _suffix(second_id) == _suffix(first_id) + 1
 
 
@@ -120,6 +132,33 @@ async def test_latest_created_position_is_listed_first(client):
     listing = await client.get('/api/positions')
     assert listing.status_code == 200
     assert listing.json()['data'][0]['id'] == created_id
+
+
+async def test_setting_status_filled_moves_role_to_filled_page(client):
+    created = await client.post(
+        '/api/positions',
+        json={
+            'job_id': '',
+            'role_title': 'Move To Filled',
+            'team': 'Team 27',
+            'location': 'Lahore',
+            'departure_type': 'Backfill',
+            'status': 'Sourcing',
+            'active_inactive': 'Active',
+        },
+    )
+    assert created.status_code == 201
+    role_id = created.json()['data']['id']
+    job_id = created.json()['data']['job_id']
+
+    update = await client.put(f'/api/positions/{role_id}', json={'status': 'Filled'})
+    assert update.status_code == 200
+
+    outstanding_after = await client.get('/api/positions')
+    assert all(item['id'] != role_id for item in outstanding_after.json()['data'])
+
+    filled_after = await client.get('/api/filled-roles')
+    assert any(item['job_id'] == job_id for item in filled_after.json()['data'])
 
 
 async def test_super_admin_can_delete_position(client):

@@ -32,6 +32,7 @@ export default function OutstandingPositions() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["outstanding-roles"] });
+      await queryClient.invalidateQueries({ queryKey: ["filled-roles"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
     }
   });

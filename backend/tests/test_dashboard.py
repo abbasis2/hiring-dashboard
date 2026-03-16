@@ -30,3 +30,11 @@ async def test_dashboard_stats_include_new_meta_gender_and_heatmaps(client):
     assert 'dropout_heatmap' in body
     assert isinstance(body['gender_overview']['meta'], list)
     assert isinstance(body['attrition_heatmap']['months'], list)
+
+
+async def test_dashboard_stats_compute_offer_acceptance_and_time_to_fill(client):
+    response = await client.get('/api/dashboard/stats')
+    assert response.status_code == 200
+    summary = response.json()['data']['summary']
+    assert summary['offer_acceptance_rate'].endswith('%')
+    assert isinstance(summary['avg_time_to_fill'], str)

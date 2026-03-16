@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { z } from "zod";
@@ -17,7 +17,6 @@ const nullableNumber = z.preprocess(
 );
 
 const schema = z.object({
-  job_id: z.string().default(""),
   role_title: z.string().min(1, "Role title is required"),
   link_to_jd: z.string().default(""),
   team: z.string().min(1, "Team is required"),
@@ -31,7 +30,6 @@ const schema = z.object({
   interviews_completed: nullableNumber,
   interviews_pending: nullableNumber,
   date_filled: z.string().default(""),
-  active_inactive: z.string().default("Active"),
   reason_why_next_steps: z.string().default(""),
 });
 
@@ -44,11 +42,11 @@ export default function AddJob() {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors }
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      job_id: "",
       role_title: "",
       link_to_jd: "",
       team: options.team[0] ?? "",
@@ -62,9 +60,18 @@ export default function AddJob() {
       interviews_completed: null,
       interviews_pending: null,
       date_filled: "",
-      active_inactive: options.active_inactive[0] ?? "Active",
       reason_why_next_steps: "",
     }
+  });
+
+  const nextJobIdQuery = useQuery({
+    queryKey: ["next-job-id"],
+    queryFn: async () => {
+      const response = await client.get<ApiResponse<{ job_id: string }>>("/api/positions/next-job-id");
+      return response.data?.data?.job_id ?? "";
+    },
+    staleTime: 10_000,
+    refetchOnWindowFocus: false,
   });
 
   const mutation = useMutation({
@@ -79,8 +86,26 @@ export default function AddJob() {
       return response.data.data;
     },
     onSuccess: async () => {
+      reset({
+        role_title: "",
+        link_to_jd: "",
+        team: options.team[0] ?? "",
+        location: options.location[0] ?? "",
+        backfill_reason: "",
+        departure_type: options.departure_type[0] ?? "Backfill",
+        candidate_gender: options.gender[0] ?? "",
+        start_date: "",
+        status: options.outstanding_status[0] ?? "Sourcing",
+        internal_shortlisted: null,
+        interviews_completed: null,
+        interviews_pending: null,
+        date_filled: "",
+        reason_why_next_steps: "",
+      });
       await queryClient.invalidateQueries({ queryKey: ["outstanding-roles"] });
+      await queryClient.invalidateQueries({ queryKey: ["filled-roles"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+      await queryClient.invalidateQueries({ queryKey: ["next-job-id"] });
     }
   });
 
@@ -103,7 +128,11 @@ export default function AddJob() {
         <div className="card-shell grid gap-4 md:grid-cols-2">
           <label className="space-y-2">
             <span className="text-sm text-[var(--text-secondary)]">Job ID</span>
-            <input className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3" placeholder="Auto-generated if left blank" {...register("job_id")} />
+            <input
+              className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3 text-[var(--text-secondary)]"
+              readOnly
+              value={nextJobIdQuery.data ?? "Loading next Job ID..."}
+            />
           </label>
           <label className="space-y-2">
             <span className="text-sm text-[var(--text-secondary)]">Role Title</span>
@@ -192,16 +221,6 @@ export default function AddJob() {
           <label className="space-y-2">
             <span className="text-sm text-[var(--text-secondary)]">Date Filled</span>
             <input className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3" type="date" {...register("date_filled")} />
-          </label>
-          <label className="space-y-2">
-            <span className="text-sm text-[var(--text-secondary)]">Active / Inactive</span>
-            <select className="w-full rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3" {...register("active_inactive")}>
-              {options.active_inactive.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
           </label>
         </div>
         <div className="flex items-center gap-4">

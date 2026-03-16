@@ -154,6 +154,36 @@ def parse_month(value: Any) -> str | None:
     return None
 
 
+def parse_date_value(value: Any) -> date | None:
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+
+    text = clean_text(value)
+    if not text:
+        return None
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
+        try:
+            return date.fromisoformat(text)
+        except ValueError:
+            return None
+
+    patterns = (
+        "%Y/%m/%d",
+        "%m/%d/%Y",
+        "%m/%d/%y",
+        "%d/%m/%Y",
+        "%d-%m-%Y",
+    )
+    for pattern in patterns:
+        try:
+            return datetime.strptime(text, pattern).date()
+        except ValueError:
+            continue
+    return None
+
+
 def gender_breakdown(values: Iterable[str]) -> list[dict[str, Any]]:
     normalized = [normalize_gender(value) for value in values]
     total = len(normalized)
@@ -276,6 +306,48 @@ async def _next_outstanding_job_id(session: AsyncSession) -> str:
     existing_job_ids = list(await session.scalars(select(OutstandingRole.job_id)))
     max_suffix, width = _job_id_state(existing_job_ids)
     return _format_job_id(max_suffix + 1, width)
+
+
+async def peek_next_outstanding_job_id(session: AsyncSession) -> str:
+    await _ensure_outstanding_job_ids(session)
+    return await _next_outstanding_job_id(session)
+
+
+async def _upsert_filled_from_outstanding(session: AsyncSession, role: OutstandingRole) -> None:
+    existing = await session.scalar(select(FilledRole).where(FilledRole.job_id == role.job_id))
+    if existing is not None:
+        existing.role_title = role.role_title
+        existing.team = role.team
+        existing.location = role.location
+        existing.backfill_reason = role.backfill_reason
+        existing.departure_type = role.departure_type
+        existing.departure_event_date = clean_text(role.date_filled) or existing.departure_event_date
+        existing.reason_why_next_steps = role.reason_why_next_steps
+        if not clean_text(existing.hired_gender):
+            existing.hired_gender = role.candidate_gender
+        if not clean_text(existing.status):
+            existing.status = "Offer Accepted"
+        return
+
+    session.add(
+        FilledRole(
+            job_id=role.job_id,
+            role_title=role.role_title,
+            team=role.team,
+            location=role.location,
+            backfill_reason=role.backfill_reason,
+            departure_type=role.departure_type,
+            hired_name="",
+            hired_gender=role.candidate_gender,
+            departure_event_date=clean_text(role.date_filled),
+            start_date="",
+            status="Offer Accepted",
+            notes="Auto-moved from Outstanding Positions",
+            reason_why_next_steps=role.reason_why_next_steps,
+            created_at=role.created_at,
+            updated_at=role.updated_at,
+        )
+    )
 
 
 async def _ensure_master_options(session: AsyncSession) -> int:
@@ -401,8 +473,8 @@ async def list_outstanding_roles(
     size: int = 50,
 ) -> tuple[list[OutstandingRole], int]:
     await _ensure_outstanding_job_ids(session)
-    query = select(OutstandingRole).order_by(OutstandingRole.created_at.desc(), OutstandingRole.id.desc())
-    total_query = select(func.count()).select_from(OutstandingRole)
+    query = select(OutstandingRole).where(OutstandingRole.status != "Filled").order_by(OutstandingRole.created_at.desc(), OutstandingRole.id.desc())
+    total_query = select(func.count()).select_from(OutstandingRole).where(OutstandingRole.status != "Filled")
     filters: list[Any] = []
     if dept:
         filters.append(OutstandingRole.team == dept)
@@ -423,6 +495,12 @@ async def get_outstanding_role(session: AsyncSession, role_id: int) -> Outstandi
 async def update_outstanding_role(session: AsyncSession, role: OutstandingRole, payload: OutstandingRoleUpdate) -> OutstandingRole:
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(role, field, value)
+    if clean_text(role.status).lower() == "filled":
+        await _upsert_filled_from_outstanding(session, role)
+        moved_snapshot = role
+        await session.delete(role)
+        await session.commit()
+        return moved_snapshot
     await session.commit()
     await session.refresh(role)
     return role
@@ -734,7 +812,11 @@ async def dashboard_stats(session: AsyncSession) -> dict[str, Any]:
     filled_roles = list(await session.scalars(select(FilledRole).order_by(FilledRole.job_id)))
     dropout_rows = list(await session.scalars(select(RecruitingDropout).order_by(RecruitingDropout.created_at.desc())))
 
-    active_roles = [role for role in outstanding_roles if role.active_inactive == "Active"]
+    active_roles = [
+        role
+        for role in outstanding_roles
+        if clean_text(role.status).lower() != "filled" and role.active_inactive == "Active"
+    ]
     unique_job_ids = {
         role.job_id
         for role in [*outstanding_roles, *filled_roles]
@@ -743,15 +825,35 @@ async def dashboard_stats(session: AsyncSession) -> dict[str, Any]:
     total_unique_roles = len(unique_job_ids) if unique_job_ids else len(outstanding_roles)
     attrition_fills = sum(1 for role in filled_roles if role.departure_type == "Attrition")
     termination_fills = sum(1 for role in filled_roles if role.departure_type == "Termination")
+    accepted_statuses = {"offer accepted", "started"}
+    offer_status_rows = [clean_text(role.status) for role in filled_roles if clean_text(role.status)]
+    offers_accepted = sum(1 for status in offer_status_rows if status.lower() in accepted_statuses)
+    offer_denominator = len(offer_status_rows) if offer_status_rows else len(filled_roles)
+
+    time_to_fill_days: list[int] = []
+    for role in filled_roles:
+        open_date = parse_date_value(role.created_at)
+        fill_date = (
+            parse_date_value(role.start_date)
+            or parse_date_value(role.departure_event_date)
+            or parse_date_value(role.updated_at)
+        )
+        if open_date is None or fill_date is None:
+            continue
+        if fill_date >= open_date:
+            time_to_fill_days.append((fill_date - open_date).days)
+    average_time_to_fill = (
+        f"{round(sum(time_to_fill_days) / len(time_to_fill_days))} days" if time_to_fill_days else "-"
+    )
 
     summary = {
         "total_roles": len(outstanding_roles),
         "active_open": len(active_roles),
         "filled": len(filled_roles),
         "fill_rate": as_percent(len(filled_roles), len(outstanding_roles)),
-        "avg_time_to_fill": "-",
+        "avg_time_to_fill": average_time_to_fill,
         "pipeline_conversion": "-",
-        "offer_acceptance_rate": "-",
+        "offer_acceptance_rate": as_percent(offers_accepted, offer_denominator),
     }
     plutus_meta = {
         "total_unique_roles": total_unique_roles,
@@ -764,9 +866,7 @@ async def dashboard_stats(session: AsyncSession) -> dict[str, Any]:
     }
 
     gender_overview = {
-        "meta": gender_breakdown(
-            [role.candidate_gender for role in outstanding_roles] + [role.hired_gender for role in filled_roles]
-        ),
+        "meta": gender_breakdown([role.hired_gender for role in filled_roles]),
         "pipeline": gender_breakdown([role.candidate_gender for role in active_roles]),
         "results": gender_breakdown([role.hired_gender for role in filled_roles]),
     }

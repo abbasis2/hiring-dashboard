@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { PlusCircle, Save, Search, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import client from "../api/client";
 import { useMasterOptions } from "../api/masterOptions";
@@ -34,6 +34,7 @@ const INITIAL_FORM: FormValues = {
   reason_why_next_steps: "",
   status: "Open",
 };
+const AUTOSAVE_DELAY_MS = 900;
 
 async function fetchDropouts() {
   const response = await client.get<ApiResponse<RecruitingDropout[]>>("/api/recruiting-dropouts?size=200");
@@ -51,6 +52,8 @@ export default function RecruitingDropouts() {
   const [savingId, setSavingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [notice, setNotice] = useState<string>("");
+  const draftsRef = useRef<Record<number, RecruitingDropout>>({});
+  const autoSaveTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
   const query = useQuery({
     queryKey: ["recruiting-dropouts"],
@@ -102,6 +105,19 @@ export default function RecruitingDropouts() {
     },
   });
 
+  useEffect(() => {
+    draftsRef.current = drafts;
+  }, [drafts]);
+
+  useEffect(
+    () => () => {
+      for (const timer of Object.values(autoSaveTimersRef.current)) {
+        clearTimeout(timer);
+      }
+    },
+    []
+  );
+
   const rows = useMemo(() => {
     const values = (query.data ?? []).filter((row) =>
       `${row.job_id} ${row.role_title} ${row.team} ${row.stage} ${row.dropout_reason}`.toLowerCase().includes(search.toLowerCase())
@@ -117,6 +133,34 @@ export default function RecruitingDropouts() {
         ...values,
       },
     }));
+    if (autoSaveTimersRef.current[row.id]) {
+      clearTimeout(autoSaveTimersRef.current[row.id]);
+    }
+    autoSaveTimersRef.current[row.id] = setTimeout(() => {
+      void (async () => {
+        const draft = draftsRef.current[row.id];
+        if (!draft) {
+          return;
+        }
+        setSavingId(row.id);
+        try {
+          await updateMutation.mutateAsync({ id: row.id, values: draft });
+          setDrafts((current) => {
+            const next = { ...current };
+            delete next[row.id];
+            return next;
+          });
+        } catch {
+          setNotice("Unable to save changes.");
+        } finally {
+          setSavingId((current) => (current === row.id ? null : current));
+          if (autoSaveTimersRef.current[row.id]) {
+            clearTimeout(autoSaveTimersRef.current[row.id]);
+            delete autoSaveTimersRef.current[row.id];
+          }
+        }
+      })();
+    }, AUTOSAVE_DELAY_MS);
   };
 
   return (
@@ -395,9 +439,13 @@ export default function RecruitingDropouts() {
                         className="inline-flex items-center gap-2 rounded-lg bg-[var(--accent-primary)] px-3 py-2 font-semibold text-[var(--text-on-accent)] transition-all duration-200 hover:bg-[var(--accent-primary-strong)] disabled:opacity-70"
                         disabled={savingId === row.id}
                         onClick={async () => {
+                          if (autoSaveTimersRef.current[row.id]) {
+                            clearTimeout(autoSaveTimersRef.current[row.id]);
+                            delete autoSaveTimersRef.current[row.id];
+                          }
                           setSavingId(row.id);
                           try {
-                            await updateMutation.mutateAsync({ id: row.id, values: drafts[row.id] ?? row });
+                            await updateMutation.mutateAsync({ id: row.id, values: draftsRef.current[row.id] ?? row });
                             setDrafts((current) => {
                               const next = { ...current };
                               delete next[row.id];

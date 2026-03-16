@@ -10,6 +10,7 @@ from ..crud import (
     delete_outstanding_role,
     get_outstanding_role,
     list_outstanding_roles,
+    peek_next_outstanding_job_id,
     update_outstanding_role,
 )
 from ..database import get_session
@@ -44,6 +45,12 @@ async def add_position(payload: OutstandingRoleCreate, session: AsyncSession = D
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return envelope(OutstandingRoleRead.model_validate(role).model_dump(mode="json"), 1, 1)
+
+
+@router.get("/next-job-id")
+async def read_next_job_id(session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
+    next_id = await peek_next_outstanding_job_id(session)
+    return envelope({"job_id": next_id}, 1, 1)
 
 
 @router.put("/{role_id}")
