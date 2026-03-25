@@ -812,17 +812,14 @@ async def dashboard_stats(session: AsyncSession) -> dict[str, Any]:
     filled_roles = list(await session.scalars(select(FilledRole).order_by(FilledRole.job_id)))
     dropout_rows = list(await session.scalars(select(RecruitingDropout).order_by(RecruitingDropout.created_at.desc())))
 
-    active_roles = [
-        role
-        for role in outstanding_roles
-        if clean_text(role.status).lower() != "filled" and role.active_inactive == "Active"
-    ]
+    active_roles = [role for role in outstanding_roles if clean_text(role.status).lower() != "filled"]
+    total_positions = len(active_roles) + len(filled_roles)
     unique_job_ids = {
         role.job_id
         for role in [*outstanding_roles, *filled_roles]
         if clean_text(role.job_id)
     }
-    total_unique_roles = len(unique_job_ids) if unique_job_ids else len(outstanding_roles)
+    total_unique_roles = len(unique_job_ids) if unique_job_ids else total_positions
     attrition_fills = sum(1 for role in filled_roles if role.departure_type == "Attrition")
     termination_fills = sum(1 for role in filled_roles if role.departure_type == "Termination")
     accepted_statuses = {"offer accepted", "started"}
@@ -847,22 +844,22 @@ async def dashboard_stats(session: AsyncSession) -> dict[str, Any]:
     )
 
     summary = {
-        "total_roles": len(outstanding_roles),
+        "total_roles": total_positions,
         "active_open": len(active_roles),
         "filled": len(filled_roles),
-        "fill_rate": as_percent(len(filled_roles), len(outstanding_roles)),
+        "fill_rate": as_percent(len(filled_roles), total_positions),
         "avg_time_to_fill": average_time_to_fill,
         "pipeline_conversion": "-",
         "offer_acceptance_rate": as_percent(offers_accepted, offer_denominator),
     }
     plutus_meta = {
-        "total_unique_roles": total_unique_roles,
+        "total_unique_roles": total_positions,
         "active_outstanding": len(active_roles),
         "filled_roles": len(filled_roles),
         "attrition_fills": attrition_fills,
         "termination_fills": termination_fills,
         "dropout_events": len(dropout_rows),
-        "overall_fill_rate": as_percent(len(filled_roles), total_unique_roles),
+        "overall_fill_rate": as_percent(len(filled_roles), total_positions),
     }
 
     gender_overview = {

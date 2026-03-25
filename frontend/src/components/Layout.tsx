@@ -24,7 +24,6 @@ const baseLinks = [
   { to: "/filled-positions", label: "Filled Positions", icon: UserRoundCheck },
   { to: "/recruiting-dropouts", label: "Recruiting Dropouts", icon: UserX2 },
   { to: "/add-position", label: "Add Position", icon: PlusCircle },
-  { to: "/upload", label: "Import Excel", icon: UploadCloud },
 ];
 
 export default function Layout({ children }: PropsWithChildren) {
@@ -32,13 +31,13 @@ export default function Layout({ children }: PropsWithChildren) {
   const auth = useAuth();
   const content = children ?? <Outlet />;
   const coreLinks = auth.isSuperAdmin
-    ? [...baseLinks, { to: "/users", label: "Users", icon: ShieldCheck }]
+    ? [...baseLinks, { to: "/upload", label: "Import Excel", icon: UploadCloud }, { to: "/users", label: "Users", icon: ShieldCheck }]
     : baseLinks;
 
   return (
     <div className="flex min-h-screen bg-transparent">
       <aside
-        className={`sticky top-0 h-screen border-r border-[var(--border)] bg-[var(--bg-sidebar)] px-3 py-4 text-[var(--text-on-dark)] transition-all duration-200 ${collapsed ? "w-20" : "w-72"}`}
+        className={`sticky top-0 flex h-screen flex-col border-r border-[var(--border)] bg-[var(--bg-sidebar)] px-3 py-4 text-[var(--text-on-dark)] transition-all duration-200 ${collapsed ? "w-20" : "w-72"}`}
       >
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--sidebar-border)] bg-[var(--bg-sidebar-soft)] p-3">
           <div className="flex items-center gap-3 overflow-hidden">
@@ -61,7 +60,7 @@ export default function Layout({ children }: PropsWithChildren) {
             <Menu className="h-4 w-4" />
           </button>
         </div>
-        <nav className="mt-6 space-y-5">
+        <nav className="mt-6 flex-1 space-y-5 overflow-y-auto pr-1">
           <div className="space-y-2">
             {!collapsed ? <p className="px-2 text-xs uppercase tracking-[0.16em] text-[var(--text-on-dark-muted)]">Main</p> : null}
             {coreLinks.map(({ to, label, icon: Icon }) => (
@@ -118,7 +117,7 @@ export default function Layout({ children }: PropsWithChildren) {
               : null}
           </div>
         </nav>
-        <div className="mt-6 rounded-xl border border-[var(--sidebar-border)] bg-[var(--bg-sidebar-soft)] p-3">
+        <div className="mt-4 rounded-xl border border-[var(--sidebar-border)] bg-[var(--bg-sidebar-soft)] p-3">
           {!collapsed ? <p className="truncate text-xs text-[var(--text-on-dark-muted)]">{auth.user?.email}</p> : null}
           <button
             className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--sidebar-border)] bg-[rgba(255,255,255,0.02)] px-3 py-2 text-xs font-semibold text-[var(--text-on-dark)] transition-all duration-200 hover:border-[var(--accent-primary)]"

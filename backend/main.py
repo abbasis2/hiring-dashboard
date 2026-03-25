@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 
 from .crud import replace_roles_from_workbook
 from .database import get_session_factory, init_db
-from .dependencies import get_current_user
+from .dependencies import require_super_admin
 from .excel_parser import parse_excel_workbook
 from .models import User
 from .routers.auth import router as auth_router
@@ -115,7 +115,7 @@ async def health() -> dict[str, object]:
 
 
 @app.post("/api/upload-excel", status_code=201)
-async def upload_excel(file: UploadFile = File(...), _: User = Depends(get_current_user)) -> dict[str, object]:
+async def upload_excel(file: UploadFile = File(...), _: User = Depends(require_super_admin)) -> dict[str, object]:
     if not file.filename:
         raise HTTPException(status_code=400, detail="Missing file name")
     try:

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Activity, ClipboardList, Clock3, Percent, Target, UserCheck, UsersRound } from "lucide-react";
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
 import client from "../api/client";
 import KPICard from "../components/KPICard";
@@ -12,9 +13,19 @@ import type {
   TeamBreakdown,
 } from "../types";
 
+const PIE_COLORS = ["#0f6cbd", "#2d8cff", "#63a7ff", "#91beff", "#c5dcff"];
+
 async function fetchStats() {
   const response = await client.get<ApiResponse<DashboardStats>>("/api/dashboard/stats");
   return response.data.data;
+}
+
+function formatMonthLabel(monthKey: string) {
+  const parsed = new Date(`${monthKey}-01T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return monthKey;
+  }
+  return parsed.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 }
 
 function BreakdownTable({ title, rows }: { title: string; rows: BreakdownRow[] }) {
@@ -91,22 +102,53 @@ function TeamTable({ rows }: { rows: TeamBreakdown[] }) {
   );
 }
 
-function GenderBlock({ title, rows }: { title: string; rows: GenderBreakdownRow[] }) {
+function GenderPieCard({ title, rows }: { title: string; rows: GenderBreakdownRow[] }) {
+  const data = rows.map((row) => ({
+    name: row.label,
+    value: row.count,
+    percentage: row.percentage,
+  }));
+
   return (
-    <div className="card-shell space-y-3">
+    <div className="card-shell">
       <h3 className="text-lg font-semibold">{title}</h3>
-      {rows.length === 0 ? (
-        <p className="text-sm text-[var(--text-secondary)]">No data yet.</p>
+      {data.length === 0 ? (
+        <p className="mt-3 text-sm text-[var(--text-secondary)]">No data yet.</p>
       ) : (
-        <div className="space-y-2">
-          {rows.map((row) => (
-            <div key={row.label} className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2">
-              <span className="text-sm">{row.label}</span>
-              <span className="text-sm font-semibold">
-                {row.count} ({row.percentage})
-              </span>
-            </div>
-          ))}
+        <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_200px]">
+          <div className="h-60">
+            <ResponsiveContainer height="100%" width="100%">
+              <PieChart>
+                <Pie
+                  data={data}
+                  dataKey="value"
+                  innerRadius={55}
+                  nameKey="name"
+                  outerRadius={90}
+                  paddingAngle={3}
+                >
+                  {data.map((entry, index) => (
+                    <Cell fill={PIE_COLORS[index % PIE_COLORS.length]} key={entry.name} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value, _name, entry) => [`${value} (${entry.payload.percentage})`, "Count"]} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="space-y-2">
+            {rows.map((row, index) => (
+              <div className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2" key={row.label}>
+                <span className="inline-flex items-center gap-2 text-sm">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }} />
+                  {row.label}
+                </span>
+                <span className="text-sm font-semibold">
+                  {row.count} ({row.percentage})
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -135,7 +177,7 @@ function HeatmapTable({ title, payload }: { title: string; payload: HeatmapPaylo
               <th className="px-4 py-3">Bucket</th>
               {payload.months.map((month) => (
                 <th key={month} className="px-4 py-3">
-                  {month}
+                  {formatMonthLabel(month)}
                 </th>
               ))}
               <th className="px-4 py-3">Total</th>
@@ -197,23 +239,19 @@ export default function Dashboard() {
         </div>
       </section>
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <KPICard title="Plutus Unique Roles" value={plutus_meta.total_unique_roles} subtitle="Unique job IDs across datasets" icon={<ClipboardList className="h-5 w-5" />} />
-        <KPICard title="Overall Fill Rate" value={plutus_meta.overall_fill_rate} subtitle="Filled roles vs unique roles" icon={<Percent className="h-5 w-5" />} tone="emerald" />
+        <KPICard title="Total Positions" value={plutus_meta.total_unique_roles} subtitle="Open + filled positions" icon={<ClipboardList className="h-5 w-5" />} />
+        <KPICard title="Overall Fill Rate" value={plutus_meta.overall_fill_rate} subtitle="Filled divided by (open + filled)" icon={<Percent className="h-5 w-5" />} tone="emerald" />
         <KPICard title="Attrition Fills" value={plutus_meta.attrition_fills} subtitle="Filled roles marked Attrition" icon={<UsersRound className="h-5 w-5" />} tone="amber" />
         <KPICard title="Dropout Events" value={plutus_meta.dropout_events} subtitle="Tracked candidate churn records" icon={<Target className="h-5 w-5" />} tone="red" />
-        <KPICard title="Total Roles" value={summary.total_roles} subtitle="Workbook total roles" icon={<ClipboardList className="h-5 w-5" />} />
-        <KPICard title="Active Open" value={summary.active_open} subtitle="Active outstanding roles" icon={<Activity className="h-5 w-5" />} tone="amber" />
-        <KPICard title="Filled" value={summary.filled} subtitle="Filled roles sheet" icon={<UserCheck className="h-5 w-5" />} tone="emerald" />
-        <KPICard title="Fill Rate" value={summary.fill_rate} subtitle="Filled divided by total roles" icon={<Percent className="h-5 w-5" />} />
-        <KPICard title="Avg Time-to-Fill" value={summary.avg_time_to_fill} subtitle="SLA: 30 std / 45 sr" icon={<Clock3 className="h-5 w-5" />} tone="red" />
-        <KPICard title="Pipeline Conversion" value={summary.pipeline_conversion} subtitle="Target >25%" icon={<Target className="h-5 w-5" />} />
-        <KPICard title="Offer Acceptance Rate" value={summary.offer_acceptance_rate} subtitle="Target >85%" icon={<UsersRound className="h-5 w-5" />} tone="emerald" />
+        <KPICard title="Active Open" value={summary.active_open} subtitle="Outstanding open positions" icon={<Activity className="h-5 w-5" />} tone="amber" />
+        <KPICard title="Filled" value={summary.filled} subtitle="Filled positions" icon={<UserCheck className="h-5 w-5" />} tone="emerald" />
+        <KPICard title="Avg Time-to-Fill" value={summary.avg_time_to_fill} subtitle="Auto-calculated" icon={<Clock3 className="h-5 w-5" />} tone="red" />
+        <KPICard title="Offer Acceptance Rate" value={summary.offer_acceptance_rate} subtitle="Auto-calculated" icon={<UsersRound className="h-5 w-5" />} tone="emerald" />
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-3">
-        <GenderBlock rows={gender_overview.meta} title="Gender Meta Picture" />
-        <GenderBlock rows={gender_overview.pipeline} title="Gender in Hiring Pipeline" />
-        <GenderBlock rows={gender_overview.results} title="Gender in Hiring Results" />
+      <section className="grid gap-4 xl:grid-cols-2">
+        <GenderPieCard rows={gender_overview.meta} title="Gender Meta Picture" />
+        <GenderPieCard rows={gender_overview.results} title="Gender in Hiring Results" />
       </section>
 
       <TeamTable rows={by_team} />
